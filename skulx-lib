@@ -72,7 +72,7 @@ local ClickSound = nil
 local function PlayClickSound()
     local success = pcall(function()
         local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://6026984224"
+        sound.SoundId = "rbxassetid://6895079853"
         sound.Volume = 0.5
         sound.Parent = game:GetService("SoundService")
         sound:Play()
@@ -764,33 +764,7 @@ function Library:_CreateContentArea()
         Parent = self.mainContent
     })
     CreateListLayout(self.sectionsContainer, 0, Enum.SortOrder.LayoutOrder)
-    CreatePadding(self.sectionsContainer, 10, 5, 10, 5)
-
-    local sidebarTitle = CreateInstance("TextLabel", {
-        Name = "SidebarTitle",
-        FontFace = f.Bold,
-        TextColor3 = c.Text,
-        Text = self.title,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Title + 2,
-        Size = UDim2.new(1, -20, 0, 28),
-        LayoutOrder = -999,
-        Parent = self.sectionsContainer
-    })
-
-    local sidebarTitle = CreateInstance("TextLabel", {
-        Name = "SidebarTitle",
-        FontFace = f.Bold,
-        TextColor3 = c.Text,
-        Text = self.title,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Title + 2,
-        Size = UDim2.new(1, -20, 0, 28),
-        LayoutOrder = -999,
-        Parent = self.sectionsContainer
-    })
+    CreatePadding(self.sectionsContainer, 5, 5, 10, 5)
 
     local sidebarLine = CreateInstance("Frame", {
         Name = "SidebarLine",
@@ -1289,13 +1263,13 @@ end
 function Library._CreateContentSection(tab, name)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
-        FontFace = f.Regular,
-        TextColor3 = c.TextDark,
+        FontFace = f.Bold,
+        TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 15,
-        Size = UDim2.new(1, 0, 0, 25),
+        TextSize = 14,
+        Size = UDim2.new(1, 0, 0, 22),
         Parent = tab.content
     })
     return section
