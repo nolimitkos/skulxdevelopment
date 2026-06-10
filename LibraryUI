@@ -706,11 +706,11 @@ function Library:_Createv0rtexdControls()
         FontFace = f.Regular,
         TextColor3 = c.TextDark,
         Text = "•  •  •",
-        TextSize = 16,
+        TextSize = 20,
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -10, 0, 12),
-        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -10, 0, 8),
+        Size = UDim2.new(0, 50, 0, 28),
         Parent = self.topBar
     })
 
@@ -1263,13 +1263,13 @@ end
 function Library._CreateContentSection(tab, name)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
-        FontFace = f.Bold,
-        TextColor3 = c.Text,
+        FontFace = f.Regular,
+        TextColor3 = c.TextDark,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 14,
-        Size = UDim2.new(1, 0, 0, 22),
+        TextSize = 15,
+        Size = UDim2.new(1, 0, 0, 25),
         Parent = tab.content
     })
     return section
@@ -1464,18 +1464,21 @@ function Library._CreateSlider(tab, config)
         Parent = frame
     })
 
-    local valueLabel = CreateInstance("TextLabel", {
+    local valueBox = CreateInstance("TextBox", {
         Name = "Value",
         FontFace = f.Regular,
         TextColor3 = c.Text,
         Text = tostring(currentValue),
-        TextXAlignment = Enum.TextXAlignment.Right,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, 5),
+        TextXAlignment = Enum.TextXAlignment.Center,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.2,
+        Position = UDim2.new(1, -55, 0, 4),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 50, 0, 20),
+        Size = UDim2.new(0, 45, 0, 22),
         Parent = frame
     })
+    CreateCorner(valueBox, 4)
+    CreateStroke(valueBox)
 
     local sliderBg = CreateInstance("Frame", {
         Name = "SliderBackground",
@@ -1505,9 +1508,35 @@ function Library._CreateSlider(tab, config)
         local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
         currentValue = math.floor(min + (max - min) * relativeX)
         CreateTween(sliderFill, {Size = UDim2.new(relativeX, 0, 1, 0)}, 0.05)
-        valueLabel.Text = tostring(currentValue)
+        valueBox.Text = tostring(currentValue)
         callback(currentValue)
     end
+
+    valueBox.FocusLost:Connect(function()
+        local num = tonumber(valueBox.Text)
+        if num then
+            currentValue = math.clamp(math.floor(num), min, max)
+            local relativeX = (currentValue - min) / (max - min)
+            sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+            valueBox.Text = tostring(currentValue)
+            callback(currentValue)
+        else
+            valueBox.Text = tostring(currentValue)
+        end
+    end)
+
+    valueBox.FocusLost:Connect(function()
+        local num = tonumber(valueBox.Text)
+        if num then
+            currentValue = math.clamp(math.floor(num), min, max)
+            local relativeX = (currentValue - min) / (max - min)
+            sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+            valueBox.Text = tostring(currentValue)
+            callback(currentValue)
+        else
+            valueBox.Text = tostring(currentValue)
+        end
+    end)
 
     sliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1534,7 +1563,7 @@ function Library._CreateSlider(tab, config)
             currentValue = math.clamp(value, min, max)
             local relativeX = (currentValue - min) / (max - min)
             sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-            valueLabel.Text = tostring(currentValue)
+            valueBox.Text = tostring(currentValue)
             callback(currentValue)
         end,
         GetValue = function()
