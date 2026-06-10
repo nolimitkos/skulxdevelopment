@@ -752,7 +752,20 @@ function Library:_CreateContentArea()
         Parent = self.mainContent
     })
     CreateListLayout(self.sectionsContainer, 0, Enum.SortOrder.LayoutOrder)
-    CreatePadding(self.sectionsContainer, 5, 5, 5, 5)
+    CreatePadding(self.sectionsContainer, 10, 5, 10, 5)
+
+    local sidebarTitle = CreateInstance("TextLabel", {
+        Name = "SidebarTitle",
+        FontFace = f.Bold,
+        TextColor3 = c.Text,
+        Text = self.title,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Title + 2,
+        Size = UDim2.new(1, -20, 0, 28),
+        LayoutOrder = -999,
+        Parent = self.sectionsContainer
+    })
 
     CreateInstance("Frame", {
         Name = "Separator",
@@ -1029,21 +1042,7 @@ function Library:CreateSection(name)
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = self.sectionsContainer
     })
-    CreatePadding(sectionFrame, 35, 5, 0, 0)
     CreateListLayout(sectionFrame, 2, Enum.SortOrder.LayoutOrder)
-
-    local titleLabel = CreateInstance("TextLabel", {
-        Name = "TitleLabel",
-        FontFace = f.Bold,
-        TextColor3 = c.Text,
-        Text = self.title,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 5),
-        TextSize = textsize.Title,
-        Size = UDim2.new(1, -20, 0, 25),
-        Parent = sectionFrame
-    })
 
     local headerContainer = CreateInstance("Frame", {
         Name = "HeaderContainer",
