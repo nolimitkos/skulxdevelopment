@@ -696,6 +696,21 @@ function Library:_CreateMainv0rtexd()
     self:_CreateContentArea()
     MakeDraggable(self.container, self.topBar)
 
+    CreateInstance("TextLabel", {
+        Name = "BottomTitle",
+        FontFace = f.Bold,
+        TextColor3 = c.TextDark,
+        Text = "Skulx",
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 10, 1, -8),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextSize = textsize.Tiny,
+        Size = UDim2.new(0, 60, 0, 14),
+        ZIndex = 5,
+        Parent = self.container
+    })
+
     self.screenGui.Parent = player:WaitForChild("PlayerGui")
     self._acrylicBlur = SkulxBlur.new(self.container)
 end
@@ -766,15 +781,22 @@ function Library:_CreateContentArea()
     CreateListLayout(self.sectionsContainer, 0, Enum.SortOrder.LayoutOrder)
     CreatePadding(self.sectionsContainer, 5, 5, 10, 5)
 
+    local sidebarIconFrame = CreateInstance("Frame", {
+        Name = "SidebarIconFrame",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 34),
+        LayoutOrder = -999,
+        Parent = self.sectionsContainer
+    })
+
     local sidebarIcon = CreateInstance("ImageLabel", {
         Name = "SidebarIcon",
         BackgroundTransparency = 1,
         Image = "rbxassetid://91932756882825",
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, 22, 0, 22),
-        LayoutOrder = -999,
-        Parent = self.sectionsContainer
+        Parent = sidebarIconFrame
     })
 
     local sidebarLine = CreateInstance("Frame", {
@@ -2634,22 +2656,10 @@ function Library._CreateInfoPanel(tab, config)
     local updates = config.Updates or {}
     local features = config.Features or {}
 
-    local headerLabel = CreateInstance("TextLabel", {
-        Name = "GameInfoHeader",
-        FontFace = f.Regular,
-        TextColor3 = c.TextDark,
-        Text = "[ Game Information ]",
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 20),
-        Parent = tab.content
-    })
-
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 80),
+        Size = UDim2.new(1, 0, 0, 90),
         Parent = tab.content
     })
 
@@ -2663,6 +2673,19 @@ function Library._CreateInfoPanel(tab, config)
     })
     CreateCorner(gameThumb, 6)
 
+    local headerLabel = CreateInstance("TextLabel", {
+        Name = "GameInfoHeader",
+        FontFace = f.Regular,
+        TextColor3 = c.TextDark,
+        Text = "[ Game Information ]",
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Small,
+        Position = UDim2.new(0, 82, 0, 0),
+        Size = UDim2.new(1, -82, 0, 18),
+        Parent = gameRow
+    })
+
     local gameNameLabel = CreateInstance("TextLabel", {
         Name = "GameName",
         FontFace = f.Bold,
@@ -2670,9 +2693,9 @@ function Library._CreateInfoPanel(tab, config)
         Text = gameName,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 82, 0, 8),
+        Position = UDim2.new(0, 82, 0, 18),
         TextSize = textsize.Normal,
-        Size = UDim2.new(1, -82, 0, 20),
+        Size = UDim2.new(1, -82, 0, 18),
         Parent = gameRow
     })
 
@@ -2683,7 +2706,7 @@ function Library._CreateInfoPanel(tab, config)
         Text = "Players: " .. tostring(playerCount),
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 82, 0, 34),
+        Position = UDim2.new(0, 82, 0, 42),
         TextSize = textsize.Small,
         Size = UDim2.new(1, -82, 0, 16),
         Parent = gameRow
@@ -2696,7 +2719,7 @@ function Library._CreateInfoPanel(tab, config)
         Text = "Season Time: " .. seasonTime,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 82, 0, 54),
+        Position = UDim2.new(0, 82, 0, 60),
         TextSize = textsize.Small,
         Size = UDim2.new(1, -82, 0, 16),
         Parent = gameRow
