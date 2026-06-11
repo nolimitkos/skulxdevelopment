@@ -792,8 +792,8 @@ function Library:_CreateContentArea()
         Name = "SkulxIcon",
         BackgroundTransparency = 1,
         Image = "rbxassetid://91932756882825",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 11, 0.5, 0),
         Size = UDim2.new(0, 22, 0, 22),
         Parent = sidebarIconFrame
     })
@@ -2653,64 +2653,39 @@ function Library:CreateInfoTab(config)
     local gameName = config.GameName or tostring(game.PlaceId)
     local gameIcon = config.GameIcon or ("rbxgamethumb://type=GameThumbnail&id=" .. game.PlaceId .. "&w=150&h=150")
     local updates = config.Updates or {}
+    local features = config.Features or {}
 
     local infoSection = self:CreateSection("__InfoSection__")
     local infoTab = infoSection:CreateTab("Info", "rbxassetid://91932756882825")
 
-    local gameInfoFrame = CreateInstance("Frame", {
-        Name = "GameInfoFrame",
-        BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = infoTab.content
-    })
-    CreateCorner(gameInfoFrame, 5)
-    CreateStroke(gameInfoFrame)
-    CreatePadding(gameInfoFrame, 10, 10, 10, 10)
-    CreateListLayout(gameInfoFrame, 6, Enum.SortOrder.LayoutOrder)
-
-    CreateInstance("TextLabel", {
-        Name = "GameInfoLabel",
-        FontFace = f.Regular,
-        TextColor3 = c.TextDark,
-        Text = "[ Game Information ]",
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 16),
-        LayoutOrder = 0,
-        Parent = gameInfoFrame
-    })
+    Library._CreateContentSection(infoTab, "[ Game Information ]")
 
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 48),
-        LayoutOrder = 1,
-        Parent = gameInfoFrame
+        Size = UDim2.new(1, 0, 0, 54),
+        Parent = infoTab.content
     })
 
     local thumbImg = CreateInstance("ImageLabel", {
         Name = "GameThumb",
         BackgroundTransparency = 1,
         Image = gameIcon,
-        Size = UDim2.new(0, 48, 0, 48),
+        Size = UDim2.new(0, 54, 0, 54),
         Parent = gameRow
     })
-    CreateCorner(thumbImg, 5)
+    CreateCorner(thumbImg, 6)
 
     local infoCol = CreateInstance("Frame", {
         Name = "InfoCol",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 56, 0, 0),
-        Size = UDim2.new(1, -56, 1, 0),
+        Position = UDim2.new(0, 62, 0, 0),
+        Size = UDim2.new(1, -62, 1, 0),
         Parent = gameRow
     })
-    CreateListLayout(infoCol, 3, Enum.SortOrder.LayoutOrder)
+    CreateListLayout(infoCol, 4, Enum.SortOrder.LayoutOrder)
 
-    local nameLabel = CreateInstance("TextLabel", {
+    CreateInstance("TextLabel", {
         Name = "GameName",
         FontFace = f.Bold,
         TextColor3 = c.Text,
@@ -2754,45 +2729,20 @@ function Library:CreateInfoTab(config)
         local count = #plr:GetPlayers()
         playersLabel.Text = "Players: " .. count
         local t = math.floor(tick())
-        local h = math.floor(t / 3600) % 24
-        local m = math.floor(t / 60) % 60
+        local h2 = math.floor(t / 3600) % 24
+        local m2 = math.floor(t / 60) % 60
         local s2 = t % 60
-        seasonLabel.Text = string.format("Season Time: %02d:%02d:%02d", h, m, s2)
+        seasonLabel.Text = string.format("Season Time: %02d:%02d:%02d", h2, m2, s2)
     end)
 
     if #updates > 0 then
-        local updateFrame = CreateInstance("Frame", {
-            Name = "UpdateFrame",
-            BackgroundColor3 = c.Secondary,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Parent = infoTab.content
-        })
-        CreateCorner(updateFrame, 5)
-        CreateStroke(updateFrame)
-        CreatePadding(updateFrame, 10, 10, 10, 10)
-        CreateListLayout(updateFrame, 5, Enum.SortOrder.LayoutOrder)
+        Library._CreateContentSection(infoTab, "[ Update ]")
 
-        CreateInstance("TextLabel", {
-            Name = "UpdateLabel",
-            FontFace = f.Regular,
-            TextColor3 = c.TextDark,
-            Text = "[ Update ]",
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BackgroundTransparency = 1,
-            TextSize = textsize.Small,
-            Size = UDim2.new(1, 0, 0, 16),
-            LayoutOrder = 0,
-            Parent = updateFrame
-        })
-
-        for i, updateText in ipairs(updates) do
+        for _, updateText in ipairs(updates) do
             CreateInstance("TextLabel", {
-                Name = "Update_" .. i,
+                Name = "UpdateEntry",
                 FontFace = f.Regular,
-                TextColor3 = c.Text,
+                TextColor3 = c.TextDark,
                 Text = "• " .. updateText,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
@@ -2800,35 +2750,20 @@ function Library:CreateInfoTab(config)
                 TextSize = textsize.Small,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
-                LayoutOrder = i,
-                Parent = updateFrame
+                Parent = infoTab.content
             })
         end
     end
 
-    local iconFrame = CreateInstance("Frame", {
-        Name = "IconFrame",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 80),
-        Parent = infoTab.content
-    })
-
-    CreateInstance("ImageLabel", {
-        Name = "SkulxBigIcon",
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://92249422539287",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = UDim2.new(0, 64, 0, 64),
-        Parent = iconFrame
-    })
-
     return {
         SetGameName = function(_, name)
-            nameLabel.Text = name
+            infoCol:FindFirstChild("GameName").Text = name
         end,
         SetGameIcon = function(_, img)
             thumbImg.Image = img
+        end,
+        GetTab = function()
+            return infoTab
         end
     }
 end
