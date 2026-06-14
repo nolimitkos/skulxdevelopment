@@ -225,6 +225,28 @@ local function GetAvailableConfigs()
     return configs
 end
 
+local function SaveAutoLoadSettings(data)
+    if not writefile then return end
+    EnsureConfigFolder()
+    pcall(function()
+        writefile("SkulxConfigs/_autoload.json", hs:JSONEncode(data))
+    end)
+end
+
+local function GetAutoLoadSettings()
+    if not readfile or not isfile then return {enabled = false, config = "default"} end
+    EnsureConfigFolder()
+    local path = "SkulxConfigs/_autoload.json"
+    if not isfile(path) then return {enabled = false, config = "default"} end
+    local success, data = pcall(function()
+        return hs:JSONDecode(readfile(path))
+    end)
+    if success and type(data) == "table" then
+        return data
+    end
+    return {enabled = false, config = "default"}
+end
+
 local SkulxBlur = {}
 SkulxBlur.__index = SkulxBlur
 
@@ -427,10 +449,20 @@ function Library.new(title, configFolder)
     self._configElements = {}
     self._autoSave = false
     self._currentConfig = "default"
+    local autoLoadSettings = GetAutoLoadSettings()
+    self._autoLoad = autoLoadSettings.enabled or false
+    if autoLoadSettings.config then
+        self._currentConfig = autoLoadSettings.config
+    end
     self:_CreateMainv0rtexd()
     self:_SetupKeybindListener()
     self:_SetupMobileSupport()
     CreateNotificationContainer(self.screenGui)
+    if self._autoLoad then
+        task.defer(function()
+            self:LoadConfig(self._currentConfig)
+        end)
+    end
     return self
 end
 
@@ -709,6 +741,7 @@ function Library:_CreateMainv0rtexd()
 
     self:_CreateContentArea()
     MakeDraggable(self.container, self.topBar)
+    self:_CreateReopenButton()
 
     self.screenGui.Parent = player:WaitForChild("PlayerGui")
     self._acrylicBlur = SkulxBlur.new(self.container)
@@ -729,7 +762,7 @@ function Library:_Createv0rtexdControls()
     })
 
     closeBtn.MouseButton1Click:Connect(function()
-        self:Destroy()
+        self:_SetGuiVisible(false)
     end)
 
     closeBtn.MouseEnter:Connect(function()
@@ -754,6 +787,80 @@ function Library:_Createv0rtexdControls()
 
     self.resizeBtn = resizeBtn
     self:_SetupSmartResize(resizeBtn)
+end
+
+function Library:_SetGuiVisible(visible)
+    self.container.Visible = visible
+    if self.reopenBtn then
+        self.reopenBtn.Visible = not visible
+    end
+    if self._acrylicBlur then
+        self._acrylicBlur:SetEnabled(visible)
+    end
+end
+
+function Library:_CreateReopenButton()
+    local reopenBtn = CreateInstance("ImageButton", {
+        Name = "ReopenButton",
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0.05,
+        Image = "",
+        AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -20, 1, -20),
+        Size = UDim2.new(0, 50, 0, 50),
+        BorderSizePixel = 0,
+        Visible = false,
+        Parent = self.screenGui
+    })
+    CreateCorner(reopenBtn, 14)
+
+    local icon = CreateInstance("ImageLabel", {
+        Name = "Icon",
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://91932756882825",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0, 28, 0, 28),
+        Parent = reopenBtn
+    })
+
+    local stroke = CreateInstance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Color = Color3.fromRGB(255, 255, 255),
+        Transparency = 0,
+        Thickness = 2,
+        Parent = reopenBtn
+    })
+
+    local gradient = CreateInstance("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 80, 80)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+        }),
+        Rotation = 0,
+        Parent = stroke
+    })
+
+    Connections["reopen_gradient"] = rs.RenderStepped:Connect(function(dt)
+        gradient.Rotation = (gradient.Rotation + dt * 60) % 360
+    end)
+
+    reopenBtn.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        self:_SetGuiVisible(true)
+    end)
+
+    reopenBtn.MouseEnter:Connect(function()
+        CreateTween(reopenBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
+    end)
+
+    reopenBtn.MouseLeave:Connect(function()
+        CreateTween(reopenBtn, {BackgroundTransparency = 0.05}, animationspeed.Fast)
+    end)
+
+    MakeDraggable(reopenBtn)
+    self.reopenBtn = reopenBtn
 end
 
 function Library:_CreateContentArea()
@@ -958,6 +1065,9 @@ function Library:SaveConfig(configName)
     
     if success then
         self._currentConfig = configName
+        if self._autoLoad then
+            SaveAutoLoadSettings({enabled = true, config = configName})
+        end
         self:Notify({
             Title = "Config Saved",
             Description = "Saved as: " .. configName,
@@ -1066,6 +1176,11 @@ function Library:SetAutoSave(enabled)
             end
         end)
     end
+end
+
+function Library:SetAutoLoad(enabled)
+    self._autoLoad = enabled
+    SaveAutoLoadSettings({enabled = enabled, config = self._currentConfig})
 end
 
 function Library:CreateSection(name)
@@ -1316,97 +1431,85 @@ function Library._CreateDualSection(tab, leftName, rightName)
         Parent = tab.content
     })
 
-    local leftLabel = CreateInstance("TextLabel", {
-        Name = "LeftLabel",
-        FontFace = f.Regular,
-        TextColor3 = c.TextDark,
-        Text = leftName or "Left",
-        TextXAlignment = Enum.TextXAlignment.Left,
+    local leftCol = CreateInstance("Frame", {
+        Name = "LeftColumn",
         BackgroundTransparency = 1,
-        TextSize = 15,
-        Size = UDim2.new(0.48, 0, 0, 25),
+        Size = UDim2.new(0.48, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
         Parent = dualFrame
     })
+    CreateListLayout(leftCol, 10, Enum.SortOrder.LayoutOrder)
 
-    local rightLabel = CreateInstance("TextLabel", {
-        Name = "RightLabel",
-        FontFace = f.Regular,
-        TextColor3 = c.TextDark,
-        Text = rightName or "Right",
-        TextXAlignment = Enum.TextXAlignment.Left,
+    local rightCol = CreateInstance("Frame", {
+        Name = "RightColumn",
         BackgroundTransparency = 1,
         Position = UDim2.new(0.52, 0, 0, 0),
-        TextSize = 15,
-        Size = UDim2.new(0.48, 0, 0, 25),
-        Parent = dualFrame
-    })
-
-    local leftFrame = CreateInstance("Frame", {
-        Name = "Left",
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 26),
         Size = UDim2.new(0.48, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = dualFrame
     })
-    CreateListLayout(leftFrame, 6, Enum.SortOrder.LayoutOrder)
+    CreateListLayout(rightCol, 10, Enum.SortOrder.LayoutOrder)
 
-    local rightFrame = CreateInstance("Frame", {
-        Name = "Right",
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0.52, 0, 0, 26),
-        Size = UDim2.new(0.48, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = dualFrame
-    })
-    CreateListLayout(rightFrame, 6, Enum.SortOrder.LayoutOrder)
+    local function CreateColumn(column, defaultName)
+        local methods = {}
+        local currentFrame
 
-    local leftMethods = {}
-    local rightMethods = {}
+        local function NewSubSection(sectionName)
+            CreateInstance("TextLabel", {
+                Name = "SectionLabel",
+                FontFace = f.Regular,
+                TextColor3 = c.TextDark,
+                Text = sectionName,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BackgroundTransparency = 1,
+                TextSize = 15,
+                Size = UDim2.new(1, 0, 0, 20),
+                Parent = column
+            })
 
-    function leftMethods:CreateToggle(config)
-        return Library._CreateToggle({content = leftFrame, _library = tab._library}, config)
-    end
-    function leftMethods:CreateSlider(config)
-        return Library._CreateSlider({content = leftFrame, _library = tab._library}, config)
-    end
-    function leftMethods:CreateButton(config)
-        return Library._CreateButton({content = leftFrame, _library = tab._library}, config)
-    end
-    function leftMethods:CreateDropdown(config)
-        return Library._CreateDropdown({content = leftFrame, _library = tab._library}, config)
-    end
-    function leftMethods:CreateKeybind(config)
-        return Library._CreateKeybind({content = leftFrame, _library = tab._library}, config, tab._library)
-    end
-    function leftMethods:CreateColorPicker(config)
-        return Library._CreateColorPicker({content = leftFrame, _library = tab._library}, config)
-    end
-    function leftMethods:CreateTextBox(config)
-        return Library._CreateTextBox({content = leftFrame, _library = tab._library}, config)
+            currentFrame = CreateInstance("Frame", {
+                Name = "SectionContent",
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                Parent = column
+            })
+            CreateListLayout(currentFrame, 6, Enum.SortOrder.LayoutOrder)
+        end
+
+        NewSubSection(defaultName)
+
+        function methods:CreateSection(sectionName)
+            NewSubSection(sectionName)
+            return methods
+        end
+        function methods:CreateToggle(config)
+            return Library._CreateToggle({content = currentFrame, _library = tab._library}, config)
+        end
+        function methods:CreateSlider(config)
+            return Library._CreateSlider({content = currentFrame, _library = tab._library}, config)
+        end
+        function methods:CreateButton(config)
+            return Library._CreateButton({content = currentFrame, _library = tab._library}, config)
+        end
+        function methods:CreateDropdown(config)
+            return Library._CreateDropdown({content = currentFrame, _library = tab._library}, config)
+        end
+        function methods:CreateKeybind(config)
+            return Library._CreateKeybind({content = currentFrame, _library = tab._library}, config, tab._library)
+        end
+        function methods:CreateColorPicker(config)
+            return Library._CreateColorPicker({content = currentFrame, _library = tab._library}, config)
+        end
+        function methods:CreateTextBox(config)
+            return Library._CreateTextBox({content = currentFrame, _library = tab._library}, config)
+        end
+
+        return methods
     end
 
-    function rightMethods:CreateToggle(config)
-        return Library._CreateToggle({content = rightFrame, _library = tab._library}, config)
-    end
-    function rightMethods:CreateSlider(config)
-        return Library._CreateSlider({content = rightFrame, _library = tab._library}, config)
-    end
-    function rightMethods:CreateButton(config)
-        return Library._CreateButton({content = rightFrame, _library = tab._library}, config)
-    end
-    function rightMethods:CreateDropdown(config)
-        return Library._CreateDropdown({content = rightFrame, _library = tab._library}, config)
-    end
-    function rightMethods:CreateKeybind(config)
-        return Library._CreateKeybind({content = rightFrame, _library = tab._library}, config, tab._library)
-    end
-    function rightMethods:CreateColorPicker(config)
-        return Library._CreateColorPicker({content = rightFrame, _library = tab._library}, config)
-    end
-    function rightMethods:CreateTextBox(config)
-        return Library._CreateTextBox({content = rightFrame, _library = tab._library}, config)
-    end
+    local leftMethods = CreateColumn(leftCol, leftName or "Left")
+    local rightMethods = CreateColumn(rightCol, rightName or "Right")
 
     return leftMethods, rightMethods
 end
@@ -1471,7 +1574,7 @@ function Library._CreateSlider(tab, config)
     local max = config.Max or 100
     local default = config.Default or 50
     local callback = config.Callback or function() end
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local currentValue = default
 
     local frame = CreateInstance("Frame", {
@@ -1683,7 +1786,7 @@ function Library._CreateToggle(tab, config)
     local name = config.Name or "Toggle"
     local default = config.Default or false
     local callback = config.Callback or function() end
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local enabled = default
 
     local frame = CreateInstance("Frame", {
@@ -1791,7 +1894,7 @@ function Library._CreateDropdown(tab, config)
     local default = config.Default or options[1]
     local multiSelect = config.MultiSelect or false
     local callback = config.Callback or function() end
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local selected = multiSelect and {} or default
     local expanded = false
 
@@ -2019,7 +2122,7 @@ function Library._CreateKeybind(tab, config, lib)
     local name = config.Name or "Keybind"
     local default = config.Default or Enum.KeyCode.F
     local callback = config.Callback or function() end
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local currentKey = default
     local listening = false
 
@@ -2142,7 +2245,7 @@ function Library._CreateColorPicker(tab, config)
     local name = config.Name or "Color Picker"
     local default = config.Default or Color3.fromRGB(255, 255, 255)
     local callback = config.Callback or function() end
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local currentColor = default
     local hue, sat, val = currentColor:ToHSV()
     local expanded = false
@@ -2432,7 +2535,7 @@ function Library._CreateTextBox(tab, config)
     local callback = config.Callback or function() end
     local clearOnFocus = config.ClearOnFocus or false
     local numbersOnly = config.NumbersOnly or false
-    local flag = config.Flag
+    local flag = config.Flag or config.Name
     local currentText = default
 
     local frame = CreateInstance("Frame", {
@@ -2680,6 +2783,14 @@ function Library._CreateConfigSection(tab)
         Default = false,
         Callback = function(enabled)
             lib:SetAutoSave(enabled)
+        end
+    })
+
+    Library._CreateToggle(tab, {
+        Name = "Auto Load Config",
+        Default = lib._autoLoad or false,
+        Callback = function(enabled)
+            lib:SetAutoLoad(enabled)
         end
     })
 
