@@ -1892,7 +1892,7 @@ function Library._CreateDropdown(tab, config)
     local name = config.Name or "Dropdown"
     local options = config.Options or {"Option 1", "Option 2", "Option 3"}
     local default = config.Default or options[1]
-    local multiSelect = config.MultiSelect or false
+    local multiSelect = config.MultiSelect ~= false
     local callback = config.Callback or function() end
     local flag = config.Flag or config.Name
     local selected = multiSelect and {} or default
@@ -2011,6 +2011,8 @@ function Library._CreateDropdown(tab, config)
     end
 
     local function CreateOptionButton(option)
+        local isSelected = multiSelect and table.find(selected, option) ~= nil
+
         local optionBtn = CreateInstance("TextButton", {
             Name = option,
             FontFace = f.Regular,
@@ -2020,10 +2022,37 @@ function Library._CreateDropdown(tab, config)
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             TextSize = textsize.Small,
+            TextXAlignment = Enum.TextXAlignment.Left,
             Size = UDim2.new(1, 0, 0, s.Dropdown.OptionHeight),
             ZIndex = 100,
             Parent = optionsScroll
         })
+
+        CreateInstance("UIPadding", {
+            PaddingLeft = UDim.new(0, 10),
+            PaddingRight = UDim.new(0, 24),
+            Parent = optionBtn
+        })
+
+        local checkDot = CreateInstance("Frame", {
+            Name = "CheckDot",
+            BackgroundColor3 = c.Accent,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -8, 0.5, 0),
+            Size = UDim2.new(0, 6, 0, 6),
+            BorderSizePixel = 0,
+            BackgroundTransparency = isSelected and 0 or 1,
+            ZIndex = 101,
+            Parent = optionBtn
+        })
+        CreateCorner(checkDot, 100)
+
+        local function RefreshVisual()
+            local sel = multiSelect and (table.find(selected, option) ~= nil) or (selected == option)
+            checkDot.BackgroundTransparency = sel and 0 or 1
+            optionBtn.TextColor3 = sel and c.Text or c.TextDark
+        end
+        RefreshVisual()
 
         optionBtn.MouseEnter:Connect(function()
             CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
@@ -2042,10 +2071,19 @@ function Library._CreateDropdown(tab, config)
                 else
                     table.insert(selected, option)
                 end
+                RefreshVisual()
                 UpdateSelectedText()
                 callback(selected)
             else
                 selected = option
+                for _, child in ipairs(optionsScroll:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        local dot = child:FindFirstChild("CheckDot")
+                        if dot then dot.BackgroundTransparency = 1 end
+                        child.TextColor3 = c.TextDark
+                    end
+                end
+                RefreshVisual()
                 UpdateSelectedText()
                 callback(selected)
                 expanded = false
@@ -2806,7 +2844,6 @@ function Library:CreateInfoTab(config)
     local gameName = config.GameName or tostring(game.PlaceId)
     local gameIcon = config.GameIcon or ("rbxgamethumb://type=GameThumbnail&id=" .. game.PlaceId .. "&w=150&h=150")
     local updates = config.Updates or {}
-    local features = config.Features or {}
 
     local infoSection = self:CreateSection("__InfoSection__")
     local infoTab = infoSection:CreateTab("Info", "rbxassetid://76969973297483")
