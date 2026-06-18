@@ -2853,7 +2853,7 @@ function Library:CreateInfoTab(config)
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 54),
+        Size = UDim2.new(1, 0, 0, 72),
         Parent = infoTab.content
     })
 
@@ -2861,19 +2861,19 @@ function Library:CreateInfoTab(config)
         Name = "GameThumb",
         BackgroundTransparency = 1,
         Image = gameIcon,
-        Size = UDim2.new(0, 54, 0, 54),
+        Size = UDim2.new(0, 72, 0, 72),
         Parent = gameRow
     })
-    CreateCorner(thumbImg, 6)
+    CreateCorner(thumbImg, 8)
 
     local infoCol = CreateInstance("Frame", {
         Name = "InfoCol",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 62, 0, 0),
-        Size = UDim2.new(1, -62, 1, 0),
+        Position = UDim2.new(0, 82, 0, 0),
+        Size = UDim2.new(1, -82, 1, 0),
         Parent = gameRow
     })
-    CreateListLayout(infoCol, 4, Enum.SortOrder.LayoutOrder)
+    CreateListLayout(infoCol, 6, Enum.SortOrder.LayoutOrder)
 
     CreateInstance("TextLabel", {
         Name = "GameName",
@@ -2883,8 +2883,8 @@ function Library:CreateInfoTab(config)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, 0, 0, 18),
+        TextSize = 16,
+        Size = UDim2.new(1, 0, 0, 22),
         LayoutOrder = 0,
         Parent = infoCol
     })
@@ -2896,8 +2896,8 @@ function Library:CreateInfoTab(config)
         Text = "Players: ...",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 14),
+        TextSize = 14,
+        Size = UDim2.new(1, 0, 0, 18),
         LayoutOrder = 1,
         Parent = infoCol
     })
@@ -2909,8 +2909,8 @@ function Library:CreateInfoTab(config)
         Text = "Season Time: 00:00:00",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 14),
+        TextSize = 14,
+        Size = UDim2.new(1, 0, 0, 18),
         LayoutOrder = 2,
         Parent = infoCol
     })
@@ -2937,7 +2937,7 @@ function Library:CreateInfoTab(config)
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
                 BackgroundTransparency = 1,
-                TextSize = textsize.Small,
+                TextSize = 14,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = infoTab.content
