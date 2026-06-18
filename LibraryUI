@@ -468,7 +468,7 @@ end
 
 function Library:Notify(config)
     local title = config.Title or "Notification"
-    local description = config.Description or ""
+    local description = config.Description or config.Content or ""
     local duration = config.Duration or 3
     local icon = config.Icon or "rbxassetid://10709775704"
 
@@ -476,7 +476,7 @@ function Library:Notify(config)
         Name = "Notification",
         BackgroundColor3 = c.Notification.Background,
         Position = UDim2.new(1, 20, 0, 0),
-        Size = UDim2.new(1, 0, 0, s.Notification.Height),
+        Size = UDim2.new(1, 0, 0, 80),
         ClipsDescendants = true,
         Parent = NotificationContainer
     })
@@ -487,41 +487,38 @@ function Library:Notify(config)
         Thickness = 1.5,
         Parent = notification
     })
-    local titleLabel = CreateInstance("TextLabel", {
+    CreateInstance("TextLabel", {
         Name = "Title",
-        FontFace = f.Regular,
+        FontFace = f.Bold,
         TextColor3 = c.Text,
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 16),
+        Position = UDim2.new(0, 14, 0, 12),
         TextSize = textsize.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(1, -55, 0, 18),
         Parent = notification
     })
-    local descriptionLabel = CreateInstance("TextLabel", {
+    CreateInstance("TextLabel", {
         Name = "Description",
         FontFace = f.Regular,
         TextColor3 = c.TextDark,
         Text = description,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextWrapped = true,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 38),
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Position = UDim2.new(0, 14, 0, 34),
+        TextSize = textsize.Small,
+        Size = UDim2.new(1, -55, 0, 36),
         Parent = notification
     })
-    local iconImage = CreateInstance("ImageLabel", {
+    CreateInstance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
         Image = icon,
-        Position = UDim2.new(1, -33, 0, 23),
+        Position = UDim2.new(1, -33, 0, 20),
         Size = UDim2.new(0, 19, 0, 19),
         Parent = notification
-    })
-    CreateInstance("UIAspectRatioConstraint", {
-        Parent = iconImage
     })
     local timerBar = CreateInstance("Frame", {
         Name = "Timer",
@@ -1895,13 +1892,11 @@ function Library._CreateDropdown(tab, config)
     local multiSelect = config.MultiSelect ~= false
     local callback = config.Callback or function() end
     local flag = config.Flag or config.Name
-    local selected = multiSelect and {} or default
+    local selected = multiSelect and {} or nil
     local expanded = false
 
     if multiSelect and type(default) == "table" then
         selected = default
-    elseif multiSelect then
-        selected = {}
     end
 
     local frame = CreateInstance("Frame", {
@@ -1948,7 +1943,7 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedLabel",
         FontFace = f.Regular,
         TextColor3 = c.Text,
-        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
+        Text = multiSelect and "None" or "None",
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = textsize.Small,
@@ -1971,8 +1966,9 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
+    local searchBoxHeight = 28
     local maxVisibleOptions = 5
-    local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+    local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight) + searchBoxHeight
 
     local optionsContainer = CreateInstance("Frame", {
         Name = "OptionsContainer",
@@ -1989,11 +1985,31 @@ function Library._CreateDropdown(tab, config)
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
 
+    local searchBox = CreateInstance("TextBox", {
+        Name = "SearchBox",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        PlaceholderText = "Search...",
+        PlaceholderColor3 = c.TextDark,
+        Text = "",
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        TextSize = textsize.Small,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, 0, 0, searchBoxHeight),
+        ZIndex = 101,
+        Parent = optionsContainer
+    })
+    CreateInstance("UIPadding", {PaddingLeft = UDim.new(0, 8), Parent = searchBox})
+
     local optionsScroll = CreateInstance("ScrollingFrame", {
         Name = "OptionsScroll",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, searchBoxHeight),
+        Size = UDim2.new(1, 0, 1, -searchBoxHeight),
         CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
@@ -2006,9 +2022,26 @@ function Library._CreateDropdown(tab, config)
         if multiSelect then
             selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
         else
-            selectedLabel.Text = tostring(selected)
+            selectedLabel.Text = selected ~= nil and tostring(selected) or "None"
         end
     end
+
+    local allOptionBtns = {}
+
+    local function FilterOptions(query)
+        query = query:lower()
+        local count = 0
+        for _, btn in ipairs(allOptionBtns) do
+            local match = query == "" or btn.Name:lower():find(query, 1, true)
+            btn.Visible = match ~= nil and match ~= false
+            if btn.Visible then count = count + 1 end
+        end
+        optionsScroll.CanvasSize = UDim2.new(0, 0, 0, count * s.Dropdown.OptionHeight)
+    end
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        FilterOptions(searchBox.Text)
+    end)
 
     local function CreateOptionButton(option)
         local isSelected = multiSelect and table.find(selected, option) ~= nil
@@ -2093,6 +2126,7 @@ function Library._CreateDropdown(tab, config)
             end
         end)
 
+        table.insert(allOptionBtns, optionBtn)
         return optionBtn
     end
 
@@ -2132,6 +2166,8 @@ function Library._CreateDropdown(tab, config)
         end,
         Refresh = function(_, newOptions)
             options = newOptions
+            allOptionBtns = {}
+            searchBox.Text = ""
             for _, child in ipairs(optionsScroll:GetChildren()) do
                 if child:IsA("TextButton") then
                     child:Destroy()
@@ -2141,7 +2177,7 @@ function Library._CreateDropdown(tab, config)
                 CreateOptionButton(option)
             end
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
-            local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+            local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight) + searchBoxHeight
             optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
         end
     }
@@ -2764,10 +2800,12 @@ function Library._CreateConfigSection(tab)
     configDropdown = Library._CreateDropdown(tab, {
         Name = "Select Config",
         Options = lib:GetConfigs(),
-        Default = "default",
+        MultiSelect = false,
         Callback = function(selected)
-            configNameBox:SetText(selected)
-            lib._currentConfig = selected
+            if selected and selected ~= "" then
+                configNameBox:SetText(selected)
+                lib._currentConfig = selected
+            end
         end
     })
 
@@ -2797,7 +2835,16 @@ function Library._CreateConfigSection(tab)
         Callback = function()
             local configName = configNameBox:GetText()
             if configName and configName ~= "" then
-                lib:DeleteConfig(configName)
+                local ok, err = pcall(function()
+                    lib:DeleteConfig(configName)
+                end)
+                if not ok then
+                    lib:Notify({
+                        Title = "Delete Failed",
+                        Description = "Could not delete: " .. tostring(err),
+                        Duration = 3
+                    })
+                end
                 configDropdown:Refresh(lib:GetConfigs())
             end
         end
@@ -2813,14 +2860,6 @@ function Library._CreateConfigSection(tab)
                 Duration = 2,
                 Icon = "rbxassetid://10723356507"
             })
-        end
-    })
-
-    Library._CreateToggle(tab, {
-        Name = "Auto Save",
-        Default = false,
-        Callback = function(enabled)
-            lib:SetAutoSave(enabled)
         end
     })
 
@@ -2853,7 +2892,7 @@ function Library:CreateInfoTab(config)
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 72),
+        Size = UDim2.new(1, 0, 0, 90),
         Parent = infoTab.content
     })
 
@@ -2861,19 +2900,19 @@ function Library:CreateInfoTab(config)
         Name = "GameThumb",
         BackgroundTransparency = 1,
         Image = gameIcon,
-        Size = UDim2.new(0, 72, 0, 72),
+        Size = UDim2.new(0, 90, 0, 90),
         Parent = gameRow
     })
-    CreateCorner(thumbImg, 8)
+    CreateCorner(thumbImg, 10)
 
     local infoCol = CreateInstance("Frame", {
         Name = "InfoCol",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 82, 0, 0),
-        Size = UDim2.new(1, -82, 1, 0),
+        Position = UDim2.new(0, 102, 0, 4),
+        Size = UDim2.new(1, -102, 1, -8),
         Parent = gameRow
     })
-    CreateListLayout(infoCol, 6, Enum.SortOrder.LayoutOrder)
+    CreateListLayout(infoCol, 8, Enum.SortOrder.LayoutOrder)
 
     CreateInstance("TextLabel", {
         Name = "GameName",
@@ -2883,8 +2922,8 @@ function Library:CreateInfoTab(config)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        TextSize = 16,
-        Size = UDim2.new(1, 0, 0, 22),
+        TextSize = 18,
+        Size = UDim2.new(1, 0, 0, 24),
         LayoutOrder = 0,
         Parent = infoCol
     })
@@ -2896,8 +2935,8 @@ function Library:CreateInfoTab(config)
         Text = "Players: ...",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 14,
-        Size = UDim2.new(1, 0, 0, 18),
+        TextSize = 15,
+        Size = UDim2.new(1, 0, 0, 20),
         LayoutOrder = 1,
         Parent = infoCol
     })
@@ -2909,8 +2948,8 @@ function Library:CreateInfoTab(config)
         Text = "Season Time: 00:00:00",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 14,
-        Size = UDim2.new(1, 0, 0, 18),
+        TextSize = 15,
+        Size = UDim2.new(1, 0, 0, 20),
         LayoutOrder = 2,
         Parent = infoCol
     })
