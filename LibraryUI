@@ -467,7 +467,7 @@ function Library.new(title, configFolder)
 end
 
 function Library:Notify(config)
-    local title = config.Title or "Notification"
+    local title = "Skulx Development"
     local description = config.Description or config.Content or ""
     local duration = config.Duration or 3
     local icon = config.Icon or "rbxassetid://10709775704"
