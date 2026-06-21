@@ -891,18 +891,17 @@ function Library:_SetGuiVisible(visible)
 end
 
 function Library:_CreateReopenButton()
-    local reopenBtn = CreateInstance("ImageButton", {
-        Name = "ReopenButton",
-        BackgroundColor3 = c.Background,
-        BackgroundTransparency = 0.05,
-        Image = "",
-        AnchorPoint = Vector2.new(0, 0),
-        Position = UDim2.new(0, 20, 0, 20),
-        Size = UDim2.new(0, 50, 0, 50),
-        BorderSizePixel = 0,
-        Visible = false,
-        Parent = self.screenGui
-    })
+    local reopenBtn = Instance.new("ImageButton")
+    reopenBtn.Name = "ReopenButton"
+    reopenBtn.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    reopenBtn.BackgroundTransparency = 0.05
+    reopenBtn.Image = ""
+    reopenBtn.AnchorPoint = Vector2.new(0, 0)
+    reopenBtn.Position = UDim2.new(0, 20, 0, 20)
+    reopenBtn.Size = UDim2.new(0, 50, 0, 50)
+    reopenBtn.BorderSizePixel = 0
+    reopenBtn.Visible = false
+    reopenBtn.Parent = self.screenGui
     CreateCorner(reopenBtn, 16)
 
     local icon = CreateInstance("ImageLabel", {
