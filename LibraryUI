@@ -477,7 +477,7 @@ function Library:Notify(config)
         BackgroundColor3 = c.Notification.Background,
         Position = UDim2.new(1, 20, 0, 0),
         Size = UDim2.new(1, 0, 0, s.Notification.Height),
-        ClipsDescendants = true,
+        ClipsDescendants = false,
         Parent = NotificationContainer
     })
     CreateCorner(notification, 4)
@@ -493,10 +493,12 @@ function Library:Notify(config)
         TextColor3 = c.Text,
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 16),
+        Position = UDim2.new(0, 14, 0, 14),
         TextSize = textsize.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(1, -60, 0, 18),
+        ZIndex = 2,
         Parent = notification
     })
     local descriptionLabel = CreateInstance("TextLabel", {
@@ -505,11 +507,13 @@ function Library:Notify(config)
         TextColor3 = c.TextDark,
         Text = description,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 38),
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Position = UDim2.new(0, 14, 0, 34),
+        TextSize = textsize.Small,
+        Size = UDim2.new(1, -60, 0, 30),
+        ZIndex = 2,
         Parent = notification
     })
     local iconImage = CreateInstance("ImageLabel", {
@@ -653,7 +657,7 @@ function Library:_CreateMainv0rtexd()
     local mainStroke = CreateInstance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 0,
+        Transparency = 0.4,
         Thickness = 1,
         Parent = self.container
     })
@@ -665,6 +669,16 @@ function Library:_CreateMainv0rtexd()
         Thickness = 1.5,
         Parent = self.container
     })
+
+    self.container.MouseEnter:Connect(function()
+        CreateTween(mainStroke, {Transparency = 0, Thickness = 1.5}, animationspeed.Normal)
+        CreateTween(mainShadowStroke, {Thickness = 2}, animationspeed.Normal)
+    end)
+
+    self.container.MouseLeave:Connect(function()
+        CreateTween(mainStroke, {Transparency = 0.4, Thickness = 1}, animationspeed.Normal)
+        CreateTween(mainShadowStroke, {Thickness = 1.5}, animationspeed.Normal)
+    end)
 
     self.topBar = CreateInstance("Frame", {
         Name = "TopBar",
