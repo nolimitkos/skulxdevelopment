@@ -28,9 +28,11 @@ local c = {
     }
 }
 
+local IsMobile = ui.TouchEnabled and not ui.KeyboardEnabled
+
 local s = {
-    v0rtexd = {Width = 580, Height = 400},
-    Minv0rtexd = {Width = 540, Height = 380},
+    v0rtexd = IsMobile and {Width = 580, Height = 400} or {Width = 720, Height = 480},
+    Minv0rtexd = IsMobile and {Width = 540, Height = 380} or {Width = 620, Height = 420},
     Maxv0rtexd = {Width = 1200, Height = 800},
     Toggle = {Width = 38, Height = 21, Circle = 13},
     Button = {Height = 39},
@@ -144,7 +146,7 @@ local function CreateListLayout(parent, padding, sortOrder, direction)
 end
 
 local function IsMobileDevice()
-    return ui.TouchEnabled and not ui.KeyboardEnabled
+    return IsMobile
 end
 
 local function MakeDraggable(frame, handle)
@@ -2708,48 +2710,6 @@ end
 
 function Library._CreateConfigSection(tab)
     local lib = tab._library
-
-    Library._CreateContentSection(tab, "Credits")
-
-    local function CreateCreditRow(parent, iconId, labelText)
-        local row = CreateInstance("Frame", {
-            Name = "CreditRow_" .. labelText,
-            BackgroundColor3 = c.Secondary,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, s.Button.Height),
-            Parent = parent
-        })
-        CreateCorner(row, 5)
-        CreateStroke(row)
-
-        CreateInstance("ImageLabel", {
-            Name = "CreditIcon",
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://" .. iconId,
-            ImageColor3 = c.TextDark,
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 10, 0.5, 0),
-            Size = UDim2.new(0, 18, 0, 18),
-            Parent = row
-        })
-
-        CreateInstance("TextLabel", {
-            Name = "CreditLabel",
-            FontFace = f.Regular,
-            TextColor3 = c.TextDark,
-            Text = labelText,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BackgroundTransparency = 1,
-            Position = UDim2.new(0, 36, 0, 0),
-            TextSize = textsize.Normal,
-            Size = UDim2.new(1, -46, 1, 0),
-            Parent = row
-        })
-    end
-
-    CreateCreditRow(tab.content, "106672459959092", "YouTube: @estvivant")
-    CreateCreditRow(tab.content, "108322717613484", "DC server: Soon!")
 
     Library._CreateContentSection(tab, "Configuration")
 
