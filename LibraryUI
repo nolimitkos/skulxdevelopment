@@ -649,7 +649,28 @@ function Library:_CreateMainv0rtexd()
         Parent = self.screenGui
     })
     CreateCorner(self.container, 12)
-    CreateStroke(self.container)
+
+    local mainStroke = CreateInstance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Color = Color3.fromRGB(255, 255, 255),
+        Transparency = 0,
+        Thickness = 2,
+        Parent = self.container
+    })
+
+    local neonGradient = CreateInstance("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 80, 80)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+        }),
+        Rotation = 0,
+        Parent = mainStroke
+    })
+
+    Connections["neon_outline"] = rs.RenderStepped:Connect(function(dt)
+        neonGradient.Rotation = (neonGradient.Rotation + dt * 60) % 360
+    end)
 
     self.topBar = CreateInstance("Frame", {
         Name = "TopBar",
@@ -835,7 +856,7 @@ function Library:_CreateReopenButton()
     local gradient = CreateInstance("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 80, 80)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 0, 0)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
         }),
         Rotation = 0,
@@ -2764,9 +2785,12 @@ function Library._CreateConfigSection(tab)
         Name = "Select Config",
         Options = lib:GetConfigs(),
         Default = "default",
+        MultiSelect = false,
         Callback = function(selected)
-            configNameBox:SetText(selected)
-            lib._currentConfig = selected
+            if type(selected) == "string" then
+                configNameBox:SetText(selected)
+                lib._currentConfig = selected
+            end
         end
     })
 
