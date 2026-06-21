@@ -579,14 +579,14 @@ function Library:_SetupMobileSupport()
         ImageColor3 = c.Text,
         BackgroundColor3 = c.Background,
         BackgroundTransparency = 0.1,
-        Position = UDim2.new(0, 15, 0.5, -25),
+        Position = UDim2.new(0, 20, 0, 20),
         Size = UDim2.new(0, 50, 0, 50),
-        AnchorPoint = Vector2.new(0, 0.5),
+        AnchorPoint = Vector2.new(0, 0),
         Visible = false,
         ZIndex = 999,
         Parent = self.screenGui
     })
-    CreateCorner(mobileButton, 25)
+    CreateCorner(mobileButton, 16)
     CreateStroke(mobileButton)
     
     local dragging = false
@@ -648,7 +648,7 @@ function Library:_CreateMainv0rtexd()
         ClipsDescendants = false,
         Parent = self.screenGui
     })
-    CreateCorner(self.container, 5)
+    CreateCorner(self.container, 12)
     CreateStroke(self.container)
 
     self.topBar = CreateInstance("Frame", {
@@ -805,14 +805,14 @@ function Library:_CreateReopenButton()
         BackgroundColor3 = c.Background,
         BackgroundTransparency = 0.05,
         Image = "",
-        AnchorPoint = Vector2.new(1, 1),
-        Position = UDim2.new(1, -20, 1, -20),
+        AnchorPoint = Vector2.new(0, 0),
+        Position = UDim2.new(0, 20, 0, 20),
         Size = UDim2.new(0, 50, 0, 50),
         BorderSizePixel = 0,
         Visible = false,
         Parent = self.screenGui
     })
-    CreateCorner(reopenBtn, 14)
+    CreateCorner(reopenBtn, 16)
 
     local icon = CreateInstance("ImageLabel", {
         Name = "Icon",
