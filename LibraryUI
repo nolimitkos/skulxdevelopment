@@ -29,8 +29,8 @@ local c = {
 }
 
 local s = {
-    v0rtexd = {Width = 690, Height = 446},
-    Minv0rtexd = {Width = 500, Height = 300},
+    v0rtexd = {Width = 580, Height = 400},
+    Minv0rtexd = {Width = 540, Height = 380},
     Maxv0rtexd = {Width = 1200, Height = 800},
     Toggle = {Width = 38, Height = 21, Circle = 13},
     Button = {Height = 39},
@@ -652,33 +652,7 @@ function Library:_CreateMainv0rtexd()
         ClipsDescendants = false,
         Parent = self.screenGui
     })
-    CreateCorner(self.container, 12)
-
-    local mainStroke = CreateInstance("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        Color = Color3.fromRGB(255, 255, 255),
-        Transparency = 0.4,
-        Thickness = 1,
-        Parent = self.container
-    })
-
-    local mainShadowStroke = CreateInstance("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        Color = Color3.fromRGB(0, 0, 0),
-        Transparency = 0,
-        Thickness = 1.5,
-        Parent = self.container
-    })
-
-    self.container.MouseEnter:Connect(function()
-        CreateTween(mainStroke, {Transparency = 0, Thickness = 1.5}, animationspeed.Normal)
-        CreateTween(mainShadowStroke, {Thickness = 2}, animationspeed.Normal)
-    end)
-
-    self.container.MouseLeave:Connect(function()
-        CreateTween(mainStroke, {Transparency = 0.4, Thickness = 1}, animationspeed.Normal)
-        CreateTween(mainShadowStroke, {Thickness = 1.5}, animationspeed.Normal)
-    end)
+    CreateCorner(self.container, 10)
 
     self.topBar = CreateInstance("Frame", {
         Name = "TopBar",
@@ -1699,7 +1673,7 @@ function Library._CreateSlider(tab, config)
         end
     end)
 
-    sliderBg.InputEnded:Connect(function(input)
+    ui.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
@@ -2884,7 +2858,7 @@ function Library:CreateInfoTab(config)
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 54),
+        Size = UDim2.new(1, 0, 0, 72),
         Parent = infoTab.content
     })
 
@@ -2892,19 +2866,19 @@ function Library:CreateInfoTab(config)
         Name = "GameThumb",
         BackgroundTransparency = 1,
         Image = gameIcon,
-        Size = UDim2.new(0, 54, 0, 54),
+        Size = UDim2.new(0, 72, 0, 72),
         Parent = gameRow
     })
-    CreateCorner(thumbImg, 6)
+    CreateCorner(thumbImg, 8)
 
     local infoCol = CreateInstance("Frame", {
         Name = "InfoCol",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 62, 0, 0),
-        Size = UDim2.new(1, -62, 1, 0),
+        Position = UDim2.new(0, 84, 0, 0),
+        Size = UDim2.new(1, -84, 1, 0),
         Parent = gameRow
     })
-    CreateListLayout(infoCol, 4, Enum.SortOrder.LayoutOrder)
+    CreateListLayout(infoCol, 6, Enum.SortOrder.LayoutOrder)
 
     CreateInstance("TextLabel", {
         Name = "GameName",
@@ -2914,8 +2888,8 @@ function Library:CreateInfoTab(config)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, 0, 0, 18),
+        TextSize = 18,
+        Size = UDim2.new(1, 0, 0, 22),
         LayoutOrder = 0,
         Parent = infoCol
     })
@@ -2927,8 +2901,8 @@ function Library:CreateInfoTab(config)
         Text = "Players: ...",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 14),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, 0, 0, 17),
         LayoutOrder = 1,
         Parent = infoCol
     })
@@ -2940,8 +2914,8 @@ function Library:CreateInfoTab(config)
         Text = "Season Time: 00:00:00",
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 14),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(1, 0, 0, 17),
         LayoutOrder = 2,
         Parent = infoCol
     })
@@ -2968,7 +2942,7 @@ function Library:CreateInfoTab(config)
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
                 BackgroundTransparency = 1,
-                TextSize = textsize.Small,
+                TextSize = textsize.Normal,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = infoTab.content
