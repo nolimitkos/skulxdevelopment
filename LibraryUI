@@ -8,25 +8,98 @@ local hs = game:GetService("HttpService")
 
 local n = "Skulx"
 
-local c = {
-    Background = Color3.fromRGB(12, 12, 12),
-    Secondary = Color3.fromRGB(20, 20, 20),
-    Border = Color3.fromRGB(39, 39, 39),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDark = Color3.fromRGB(93, 93, 93),
-    TextFade = Color3.fromRGB(9, 9, 9),
-    Accent = Color3.fromRGB(255, 255, 255),
-    Toggle = {
-        Enabled = Color3.fromRGB(255, 255, 255),
-        Disabled = Color3.fromRGB(32, 32, 32),
-        Circle = Color3.fromRGB(20, 20, 20)
+local Themes = {
+    Dark = {
+        Background = Color3.fromRGB(12, 12, 12),
+        Secondary = Color3.fromRGB(20, 20, 20),
+        Border = Color3.fromRGB(39, 39, 39),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextDark = Color3.fromRGB(93, 93, 93),
+        TextFade = Color3.fromRGB(9, 9, 9),
+        Accent = Color3.fromRGB(255, 255, 255),
+        Toggle = {
+            Enabled = Color3.fromRGB(255, 255, 255),
+            Disabled = Color3.fromRGB(32, 32, 32),
+            Circle = Color3.fromRGB(20, 20, 20)
+        },
+        Notification = {
+            Background = Color3.fromRGB(11, 11, 11),
+            Border = Color3.fromRGB(26, 26, 26),
+            Timer = Color3.fromRGB(255, 255, 255)
+        }
     },
-    Notification = {
-        Background = Color3.fromRGB(11, 11, 11),
-        Border = Color3.fromRGB(26, 26, 26),
-        Timer = Color3.fromRGB(255, 255, 255)
+    White = {
+        Background = Color3.fromRGB(245, 245, 245),
+        Secondary = Color3.fromRGB(235, 235, 235),
+        Border = Color3.fromRGB(216, 216, 216),
+        Text = Color3.fromRGB(15, 15, 15),
+        TextDark = Color3.fromRGB(120, 120, 120),
+        TextFade = Color3.fromRGB(246, 246, 246),
+        Accent = Color3.fromRGB(0, 0, 0),
+        Toggle = {
+            Enabled = Color3.fromRGB(0, 0, 0),
+            Disabled = Color3.fromRGB(210, 210, 210),
+            Circle = Color3.fromRGB(245, 245, 245)
+        },
+        Notification = {
+            Background = Color3.fromRGB(250, 250, 250),
+            Border = Color3.fromRGB(220, 220, 220),
+            Timer = Color3.fromRGB(0, 0, 0)
+        }
     }
 }
+
+local c = Themes.Dark
+local currentThemeName = "Dark"
+local ThemedInstances = {}
+
+local function GetThemeKeyPath(colorValue)
+    for key, value in pairs(c) do
+        if typeof(value) == "Color3" and value == colorValue then
+            return {key}
+        elseif typeof(value) == "table" then
+            for subKey, subValue in pairs(value) do
+                if typeof(subValue) == "Color3" and subValue == colorValue then
+                    return {key, subKey}
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function ResolveThemeColor(theme, path)
+    local node = theme
+    for i = 1, #path do
+        node = node[path[i]]
+    end
+    return node
+end
+
+local function TrackThemedProperty(instance, property, path)
+    table.insert(ThemedInstances, {
+        instance = instance,
+        property = property,
+        path = path
+    })
+end
+
+local function ApplyTheme(themeName)
+    local theme = Themes[themeName]
+    if not theme then return end
+
+    c = theme
+    currentThemeName = themeName
+
+    for i = #ThemedInstances, 1, -1 do
+        local entry = ThemedInstances[i]
+        if entry.instance and entry.instance.Parent then
+            entry.instance[entry.property] = ResolveThemeColor(theme, entry.path)
+        else
+            table.remove(ThemedInstances, i)
+        end
+    end
+end
 
 local IsMobile = ui.TouchEnabled and not ui.KeyboardEnabled
 
@@ -96,11 +169,24 @@ local function CreateTween(instance, properties, duration, easingStyle, easingDi
     return tween
 end
 
+local COLOR_PROPERTIES = {
+    BackgroundColor3 = true,
+    TextColor3 = true,
+    ImageColor3 = true,
+    Color = true
+}
+
 local function CreateInstance(className, properties)
     local instance = Instance.new(className)
     for property, value in pairs(properties) do
         if property ~= "Parent" then
             instance[property] = value
+            if COLOR_PROPERTIES[property] and typeof(value) == "Color3" then
+                local path = GetThemeKeyPath(value)
+                if path then
+                    TrackThemedProperty(instance, property, path)
+                end
+            end
         end
     end
     if properties.Parent then
@@ -2710,6 +2796,20 @@ end
 
 function Library._CreateConfigSection(tab)
     local lib = tab._library
+
+    Library._CreateContentSection(tab, "Theme")
+
+    Library._CreateDropdown(tab, {
+        Name = "Select Theme",
+        Options = {"Dark", "White"},
+        Default = currentThemeName,
+        MultiSelect = false,
+        Callback = function(selected)
+            if type(selected) == "string" then
+                ApplyTheme(selected)
+            end
+        end
+    })
 
     Library._CreateContentSection(tab, "Configuration")
 
