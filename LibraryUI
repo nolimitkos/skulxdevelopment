@@ -137,8 +137,8 @@ local s = {
 }
 
 local f = {
-    Regular = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Medium),
-    Bold = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
+    Regular = Font.new("rbxasset://fonts/families/Inter.json", Enum.FontWeight.Medium),
+    Bold = Font.new("rbxasset://fonts/families/Inter.json", Enum.FontWeight.SemiBold)
 }
 
 local textsize = {
