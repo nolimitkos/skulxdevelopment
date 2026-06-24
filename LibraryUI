@@ -103,6 +103,16 @@ local function TrackThemedProperty(instance, property, path)
     })
 end
 
+local function RetargetThemedProperty(instance, property, path)
+    for _, entry in ipairs(ThemedInstances) do
+        if entry.instance == instance and entry.property == property then
+            entry.path = path
+            return
+        end
+    end
+    TrackThemedProperty(instance, property, path)
+end
+
 local function ApplyTheme(themeName)
     local theme = Themes[themeName]
     if not theme then return end
@@ -123,8 +133,8 @@ end
 local IsMobile = ui.TouchEnabled and not ui.KeyboardEnabled
 
 local s = {
-    v0rtexd = IsMobile and {Width = 580, Height = 400} or {Width = 720, Height = 480},
-    Minv0rtexd = IsMobile and {Width = 540, Height = 380} or {Width = 620, Height = 420},
+    v0rtexd = IsMobile and {Width = 620, Height = 430} or {Width = 780, Height = 520},
+    Minv0rtexd = IsMobile and {Width = 560, Height = 400} or {Width = 660, Height = 450},
     Maxv0rtexd = {Width = 1200, Height = 800},
     Toggle = {Width = 38, Height = 21, Circle = 13},
     Button = {Height = 39},
@@ -1948,9 +1958,11 @@ function Library._CreateToggle(tab, config)
 
     local function UpdateToggle()
         if enabled then
+            RetargetThemedProperty(switchBg, "BackgroundColor3", {"Toggle", "Enabled"})
             CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
             CreateTween(switchCircle, {Position = UDim2.new(0, 21, 0.5, 0)}, animationspeed.Normal)
         else
+            RetargetThemedProperty(switchBg, "BackgroundColor3", {"Toggle", "Disabled"})
             CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, animationspeed.Normal)
             CreateTween(switchCircle, {Position = UDim2.new(0, 4, 0.5, 0)}, animationspeed.Normal)
         end
@@ -2068,6 +2080,7 @@ function Library._CreateDropdown(tab, config)
     })
 
     local maxVisibleOptions = 5
+    local searchBoxHeight = 28
     local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
 
     local optionsContainer = CreateInstance("Frame", {
@@ -2076,7 +2089,7 @@ function Library._CreateDropdown(tab, config)
         BackgroundTransparency = 0.04,
         Position = UDim2.new(1, -145, 0, 38),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
+        Size = UDim2.new(0, 135, 0, totalOptionsHeight + searchBoxHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
@@ -2085,11 +2098,51 @@ function Library._CreateDropdown(tab, config)
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
 
+    local searchBoxHolder = CreateInstance("Frame", {
+        Name = "SearchBoxHolder",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, searchBoxHeight),
+        ZIndex = 101,
+        Parent = optionsContainer
+    })
+    CreateInstance("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+        Parent = searchBoxHolder
+    })
+
+    local searchBox = CreateInstance("TextBox", {
+        Name = "SearchBox",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        PlaceholderText = "Search...",
+        PlaceholderColor3 = c.TextDark,
+        Text = "",
+        ClearTextOnFocus = false,
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        TextSize = textsize.Small,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 101,
+        Parent = searchBoxHolder
+    })
+    CreateCorner(searchBox, 4)
+    CreateInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, 8),
+        PaddingRight = UDim.new(0, 8),
+        Parent = searchBox
+    })
+
     local optionsScroll = CreateInstance("ScrollingFrame", {
         Name = "OptionsScroll",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, searchBoxHeight),
+        Size = UDim2.new(1, 0, 1, -searchBoxHeight),
         CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
@@ -2196,6 +2249,25 @@ function Library._CreateDropdown(tab, config)
         CreateOptionButton(option)
     end
 
+    local function FilterOptions(query)
+        query = query:lower()
+        local visibleCount = 0
+        for _, child in ipairs(optionsScroll:GetChildren()) do
+            if child:IsA("TextButton") then
+                local matches = query == "" or child.Name:lower():find(query, 1, true) ~= nil
+                child.Visible = matches
+                if matches then
+                    visibleCount = visibleCount + 1
+                end
+            end
+        end
+        optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * s.Dropdown.OptionHeight)
+    end
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        FilterOptions(searchBox.Text)
+    end)
+
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleBtn",
         Text = "",
@@ -2209,6 +2281,10 @@ function Library._CreateDropdown(tab, config)
         PlayClickSound()
         expanded = not expanded
         optionsContainer.Visible = expanded
+        if expanded then
+            searchBox.Text = ""
+            FilterOptions("")
+        end
         CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
         frame.ZIndex = expanded and 10 or 1
     end)
