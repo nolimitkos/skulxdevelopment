@@ -177,7 +177,7 @@ local function PlayClickSound()
     local success = pcall(function()
         local sound = Instance.new("Sound")
         sound.SoundId = "rbxassetid://6895079853"
-        sound.Volume = 0.5
+        sound.Volume = 1
         sound.Parent = game:GetService("SoundService")
         sound:Play()
         game:GetService("Debris"):AddItem(sound, 1)
@@ -207,11 +207,13 @@ local COLOR_PROPERTIES = {
 
 local function CreateInstance(className, properties)
     local instance = Instance.new(className)
+    local themePaths = properties.ThemePaths
     for property, value in pairs(properties) do
-        if property ~= "Parent" then
+        if property ~= "Parent" and property ~= "ThemePaths" then
             instance[property] = value
             if COLOR_PROPERTIES[property] and typeof(value) == "Color3" then
-                local path = GetThemeKeyPath(value)
+                local explicitPath = themePaths and themePaths[property]
+                local path = explicitPath or GetThemeKeyPath(value)
                 if path then
                     TrackThemedProperty(instance, property, path)
                 end
