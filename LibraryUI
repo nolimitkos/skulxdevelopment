@@ -147,8 +147,8 @@ local s = {
 }
 
 local f = {
-    Regular = Font.new("rbxasset://fonts/families/Sarpanch.json", Enum.FontWeight.Medium),
-    Bold = Font.new("rbxasset://fonts/families/Sarpanch.json", Enum.FontWeight.SemiBold)
+    Regular = Enum.Font.Code,
+    Bold = Enum.Font.Code
 }
 
 local textsize = {
