@@ -608,7 +608,7 @@ function Library:Notify(config)
     })
     local titleLabel = CreateInstance("TextLabel", {
         Name = "Title",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -622,7 +622,7 @@ function Library:Notify(config)
     })
     local descriptionLabel = CreateInstance("TextLabel", {
         Name = "Description",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = description,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -795,7 +795,7 @@ function Library:_CreateMainv0rtexd()
 
     self.fpsLabel = CreateInstance("TextLabel", {
         Name = "FPS",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = "60 FPS",
         BackgroundTransparency = 1,
@@ -808,7 +808,7 @@ function Library:_CreateMainv0rtexd()
 
     self.pingLabel = CreateInstance("TextLabel", {
         Name = "Ping",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = "0 ms",
         BackgroundTransparency = 1,
@@ -821,7 +821,7 @@ function Library:_CreateMainv0rtexd()
 
     self.titleLabel = CreateInstance("TextLabel", {
         Name = "Title",
-        FontFace = f.Bold,
+        Font = f.Bold,
         TextColor3 = c.TextDark,
         Text = "Skulx",
         BackgroundTransparency = 1,
@@ -872,7 +872,7 @@ end
 function Library:_Createv0rtexdControls()
     local closeBtn = CreateInstance("TextButton", {
         Name = "Close",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = "•  •  •",
         TextSize = 20,
@@ -1380,7 +1380,7 @@ function Library._CreateTab(section, name, icon)
 
     local tabText = CreateInstance("TextLabel", {
         Name = "TabText",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1531,7 +1531,7 @@ end
 function Library._CreateContentSection(tab, name)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1578,7 +1578,7 @@ function Library._CreateDualSection(tab, leftName, rightName)
         local function NewSubSection(sectionName)
             CreateInstance("TextLabel", {
                 Name = "SectionLabel",
-                FontFace = f.Regular,
+                Font = f.Regular,
                 TextColor3 = c.TextDark,
                 Text = sectionName,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -1654,7 +1654,7 @@ function Library._CreateParagraph(tab, config)
 
     local titleLabel = CreateInstance("TextLabel", {
         Name = "Title",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1666,7 +1666,7 @@ function Library._CreateParagraph(tab, config)
 
     local contentLabel = CreateInstance("TextLabel", {
         Name = "Content",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = content,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1711,7 +1711,7 @@ function Library._CreateSlider(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1724,7 +1724,7 @@ function Library._CreateSlider(tab, config)
 
     local valueBox = CreateInstance("TextBox", {
         Name = "Value",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = tostring(currentValue),
         TextXAlignment = Enum.TextXAlignment.Center,
@@ -1843,7 +1843,7 @@ function Library._CreateButton(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1910,7 +1910,7 @@ function Library._CreateToggle(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2029,7 +2029,7 @@ function Library._CreateDropdown(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2056,7 +2056,7 @@ function Library._CreateDropdown(tab, config)
 
     local selectedLabel = CreateInstance("TextLabel", {
         Name = "SelectedLabel",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2117,7 +2117,7 @@ function Library._CreateDropdown(tab, config)
 
     local searchBox = CreateInstance("TextBox", {
         Name = "SearchBox",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         PlaceholderText = "Search...",
         PlaceholderColor3 = c.TextDark,
@@ -2166,7 +2166,7 @@ function Library._CreateDropdown(tab, config)
 
         local optionBtn = CreateInstance("TextButton", {
             Name = option,
-            FontFace = f.Regular,
+            Font = f.Regular,
             TextColor3 = c.Text,
             Text = option,
             BackgroundColor3 = Color3.fromRGB(30, 30, 30),
@@ -2363,7 +2363,7 @@ function Library._CreateKeybind(tab, config, lib)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2389,7 +2389,7 @@ function Library._CreateKeybind(tab, config, lib)
 
     local keyLabel = CreateInstance("TextLabel", {
         Name = "KeyLabel",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = currentKey.Name,
         BackgroundTransparency = 1,
@@ -2487,7 +2487,7 @@ function Library._CreateColorPicker(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2775,7 +2775,7 @@ function Library._CreateTextBox(tab, config)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2812,7 +2812,7 @@ function Library._CreateTextBox(tab, config)
 
     local textBox = CreateInstance("TextBox", {
         Name = "Input",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.Text,
         PlaceholderText = placeholder,
         PlaceholderColor3 = c.TextDark,
@@ -3038,7 +3038,7 @@ function Library:CreateInfoTab(config)
 
     CreateInstance("TextLabel", {
         Name = "GameName",
-        FontFace = f.Bold,
+        Font = f.Bold,
         TextColor3 = c.Text,
         Text = gameName,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -3052,7 +3052,7 @@ function Library:CreateInfoTab(config)
 
     local playersLabel = CreateInstance("TextLabel", {
         Name = "Players",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = "Players: ...",
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -3065,7 +3065,7 @@ function Library:CreateInfoTab(config)
 
     local seasonLabel = CreateInstance("TextLabel", {
         Name = "SeasonTime",
-        FontFace = f.Regular,
+        Font = f.Regular,
         TextColor3 = c.TextDark,
         Text = "Season Time: 00:00:00",
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -3092,7 +3092,7 @@ function Library:CreateInfoTab(config)
         for _, updateText in ipairs(updates) do
             CreateInstance("TextLabel", {
                 Name = "UpdateEntry",
-                FontFace = f.Regular,
+                Font = f.Regular,
                 TextColor3 = c.TextDark,
                 Text = "• " .. updateText,
                 TextXAlignment = Enum.TextXAlignment.Left,
