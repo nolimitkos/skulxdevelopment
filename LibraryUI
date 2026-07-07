@@ -2863,190 +2863,7 @@ end
 function Library._CreateConfigSection(tab)
     local lib = tab._library
 
-    local LeftBox, RightBox = Library._CreateDualSection(tab, "Character", "Configuration")
-
-    local HeadlessEnabled = false
-    local HeadlessConnection = nil
-    local HEADLESS_MESH_ID = "rbxassetid://1095708"
-
-    local function applyHeadless(character)
-        local head = character:FindFirstChild("Head")
-        if not head then return end
-        head.Transparency = 1
-        head.CanCollide = false
-        local face = head:FindFirstChildOfClass("Decal")
-        if face then face:Destroy() end
-        for _, v in ipairs(head:GetChildren()) do
-            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
-                v:Destroy()
-            end
-        end
-        local mesh = Instance.new("SpecialMesh")
-        mesh.MeshType = Enum.MeshType.FileMesh
-        mesh.MeshId = HEADLESS_MESH_ID
-        mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
-        mesh.Parent = head
-    end
-
-    local function removeHeadless(character)
-        local head = character:FindFirstChild("Head")
-        if not head then return end
-        head.Transparency = 0
-        head.CanCollide = true
-        for _, v in ipairs(head:GetChildren()) do
-            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
-                v:Destroy()
-            end
-        end
-        local mesh = Instance.new("SpecialMesh")
-        mesh.Parent = head
-    end
-
-    LeftBox:CreateToggle({
-        Name = "Verified Badge",
-        Default = false,
-        Callback = function(Value)
-            if Value then
-                local LocalPlayer = plr.LocalPlayer
-                local BADGE = utf8.char(0xE000)
-                local function IsLocalPlayerDisplayName(displayName)
-                    return LocalPlayer and LocalPlayer.DisplayName == displayName
-                end
-                local function IsChatMenu(obj)
-                    if not obj then return false end
-                    local current = obj
-                    for i = 1, 15 do
-                        if not current then break end
-                        if current.Name then
-                            local name = current.Name:lower()
-                            if name:find("chat") and (name:find("window") or name:find("menu") or name:find("bubble") or name:find("input")) then
-                                return true
-                            end
-                            if name == "textchatchatwindow" or name == "chatwindow" or name == "chatinputbar" or name == "chatchannelselector" then
-                                return true
-                            end
-                        end
-                        if current.Parent then
-                            current = current.Parent
-                        else
-                            break
-                        end
-                    end
-                    return false
-                end
-                local function SpoofAndBadge(obj)
-                    if not obj.Text or obj.Text == "" or obj:GetAttribute("Badged") then return end
-                    if IsChatMenu(obj) then return end
-                    local updated = false
-                    local currentText = obj.Text
-                    local displayName = LocalPlayer.DisplayName
-                    local userName = LocalPlayer.Name
-                    if currentText == userName then return end
-                    if currentText:find(displayName, 1, true) and not currentText:find(BADGE, 1, true) then
-                        local newText = currentText:gsub(
-                            displayName:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1"),
-                            function(match)
-                                local prefix = currentText:sub(1, currentText:find(match, 1, true) - 1)
-                                local senderDisplayName = prefix:match("^(.-)%s*:")
-                                if senderDisplayName and not IsLocalPlayerDisplayName(senderDisplayName) then
-                                    return match
-                                end
-                                return match .. " " .. BADGE
-                            end
-                        )
-                        if newText ~= currentText then
-                            currentText = newText
-                            updated = true
-                        end
-                    end
-                    if updated then
-                        obj:SetAttribute("Badged", true)
-                        obj.Text = currentText
-                        obj:SetAttribute("Badged", nil)
-                    end
-                end
-                local function MonitorObject(obj)
-                    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                        task.defer(SpoofAndBadge, obj)
-                        obj:GetPropertyChangedSignal("Text"):Connect(function()
-                            SpoofAndBadge(obj)
-                        end)
-                    end
-                end
-                for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    MonitorObject(v)
-                end
-                LocalPlayer.PlayerGui.DescendantAdded:Connect(MonitorObject)
-                pcall(function()
-                    local CoreGui = game:GetService("CoreGui")
-                    for _, v in ipairs(CoreGui:GetDescendants()) do
-                        MonitorObject(v)
-                    end
-                    CoreGui.DescendantAdded:Connect(MonitorObject)
-                end)
-                local function SetupNametag(char)
-                    local player = plr:GetPlayerFromCharacter(char)
-                    local humanoid = char:WaitForChild("Humanoid", 10)
-                    if not humanoid then return end
-                    if player == LocalPlayer then
-                        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                    else
-                        if player == LocalPlayer then
-                            humanoid.DisplayName = player.DisplayName .. " " .. BADGE
-                        end
-                    end
-                end
-                for _, p in ipairs(plr:GetPlayers()) do
-                    if p.Character then task.spawn(SetupNametag, p.Character) end
-                    p.CharacterAdded:Connect(SetupNametag)
-                end
-                plr.PlayerAdded:Connect(function(p)
-                    p.CharacterAdded:Connect(SetupNametag)
-                end)
-                pcall(function()
-                    local TextChatService = game:GetService("TextChatService")
-                    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-                        TextChatService.OnIncomingMessage = function(message)
-                            local props = Instance.new("TextChatMessageProperties")
-                            if message.TextSource and message.TextSource.UserId == LocalPlayer.UserId then
-                                props.PrefixText = LocalPlayer.DisplayName .. " " .. BADGE .. ":"
-                            end
-                            return props
-                        end
-                    end
-                end)
-            end
-        end
-    })
-
-    LeftBox:CreateToggle({
-        Name = "Headless",
-        Default = false,
-        Callback = function(Value)
-            HeadlessEnabled = Value
-            if Value then
-                if lib._localPlayer.Character then
-                    applyHeadless(lib._localPlayer.Character)
-                end
-                HeadlessConnection = lib._localPlayer.CharacterAdded:Connect(function(char)
-                    task.wait(1)
-                    if HeadlessEnabled then
-                        applyHeadless(char)
-                    end
-                end)
-            else
-                if HeadlessConnection then
-                    HeadlessConnection:Disconnect()
-                    HeadlessConnection = nil
-                end
-                if lib._localPlayer.Character then
-                    removeHeadless(lib._localPlayer.Character)
-                end
-            end
-        end
-    })
-
-    LeftBox:CreateSection("Game")
+    local LeftBox, RightBox = Library._CreateDualSection(tab, "Game", "Configuration")
 
     LeftBox:CreateButton({
         Name = "Rejoin",
@@ -3089,9 +2906,265 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    LeftBox:CreateSection("Theme")
+    local spacer = Instance.new("Frame")
+    spacer.Name = "Spacer"
+    spacer.BackgroundTransparency = 1
+    spacer.Size = UDim2.new(1, 0, 0, 10)
+    spacer.Parent = LeftBox.content
 
-    LeftBox:CreateDropdown({
+    local HeadlessEnabled = false
+    local HeadlessConnection = nil
+    local HEADLESS_MESH_ID = "rbxassetid://1095708"
+
+    local function applyHeadless(character)
+        local head = character:FindFirstChild("Head")
+        if not head then return end
+        head.Transparency = 1
+        head.CanCollide = false
+        local face = head:FindFirstChildOfClass("Decal")
+        if face then face:Destroy() end
+        for _, v in ipairs(head:GetChildren()) do
+            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
+                v:Destroy()
+            end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.MeshId = HEADLESS_MESH_ID
+        mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
+        mesh.Parent = head
+    end
+
+    local function removeHeadless(character)
+        local head = character:FindFirstChild("Head")
+        if not head then return end
+        head.Transparency = 0
+        head.CanCollide = true
+        for _, v in ipairs(head:GetChildren()) do
+            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
+                v:Destroy()
+            end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.Parent = head
+    end
+
+    local BadgeActive = false
+    local BadgeConnections = {}
+    local BadgeNametagConnections = {}
+
+    LeftBox:CreateToggle({
+        Name = "Verified Badge",
+        Default = false,
+        Callback = function(Value)
+            BadgeActive = Value
+            if Value then
+                local LocalPlayer = plr.LocalPlayer
+                local BADGE = utf8.char(0xE000)
+                local function IsLocalPlayerDisplayName(displayName)
+                    return LocalPlayer and LocalPlayer.DisplayName == displayName
+                end
+                local function IsChatMenu(obj)
+                    if not obj then return false end
+                    local current = obj
+                    for i = 1, 15 do
+                        if not current then break end
+                        if current.Name then
+                            local name = current.Name:lower()
+                            if name:find("chat") and (name:find("window") or name:find("menu") or name:find("bubble") or name:find("input")) then
+                                return true
+                            end
+                            if name == "textchatchatwindow" or name == "chatwindow" or name == "chatinputbar" or name == "chatchannelselector" then
+                                return true
+                            end
+                        end
+                        if current.Parent then
+                            current = current.Parent
+                        else
+                            break
+                        end
+                    end
+                    return false
+                end
+                local function SpoofAndBadge(obj)
+                    if not obj.Text or obj.Text == "" then return end
+                    if IsChatMenu(obj) then return end
+                    local updated = false
+                    local currentText = obj.Text
+                    local displayName = LocalPlayer.DisplayName
+                    local userName = LocalPlayer.Name
+                    if currentText == userName then return end
+                    if currentText:find(displayName, 1, true) and not currentText:find(BADGE, 1, true) then
+                        local newText = currentText:gsub(
+                            displayName:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1"),
+                            function(match)
+                                local prefix = currentText:sub(1, currentText:find(match, 1, true) - 1)
+                                local senderDisplayName = prefix:match("^(.-)%s*:")
+                                if senderDisplayName and not IsLocalPlayerDisplayName(senderDisplayName) then
+                                    return match
+                                end
+                                return match .. " " .. BADGE
+                            end
+                        )
+                        if newText ~= currentText then
+                            currentText = newText
+                            updated = true
+                        end
+                    end
+                    if updated then
+                        obj.Text = currentText
+                    end
+                end
+                local function RemoveBadge(obj)
+                    if not obj.Text or obj.Text == "" then return end
+                    if obj.Text:find(BADGE, 1, true) then
+                        obj.Text = obj.Text:gsub(" " .. BADGE, "")
+                    end
+                end
+                local function MonitorObject(obj)
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                        task.defer(SpoofAndBadge, obj)
+                        local conn = obj:GetPropertyChangedSignal("Text"):Connect(function()
+                            if BadgeActive then
+                                SpoofAndBadge(obj)
+                            else
+                                RemoveBadge(obj)
+                            end
+                        end)
+                        table.insert(BadgeConnections, conn)
+                    end
+                end
+                for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    MonitorObject(v)
+                end
+                local conn1 = LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
+                    if BadgeActive then
+                        MonitorObject(obj)
+                    end
+                end)
+                table.insert(BadgeConnections, conn1)
+                pcall(function()
+                    local CoreGui = game:GetService("CoreGui")
+                    for _, v in ipairs(CoreGui:GetDescendants()) do
+                        MonitorObject(v)
+                    end
+                    local conn2 = CoreGui.DescendantAdded:Connect(function(obj)
+                        if BadgeActive then
+                            MonitorObject(obj)
+                        end
+                    end)
+                    table.insert(BadgeConnections, conn2)
+                end)
+                local function SetupNametag(char)
+                    local player = plr:GetPlayerFromCharacter(char)
+                    local humanoid = char:WaitForChild("Humanoid", 10)
+                    if not humanoid then return end
+                    if player == LocalPlayer then
+                        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                    end
+                end
+                for _, p in ipairs(plr:GetPlayers()) do
+                    if p.Character then task.spawn(SetupNametag, p.Character) end
+                    local conn = p.CharacterAdded:Connect(SetupNametag)
+                    table.insert(BadgeNametagConnections, conn)
+                end
+                local conn3 = plr.PlayerAdded:Connect(function(p)
+                    local conn = p.CharacterAdded:Connect(SetupNametag)
+                    table.insert(BadgeNametagConnections, conn)
+                end)
+                table.insert(BadgeNametagConnections, conn3)
+                pcall(function()
+                    local TextChatService = game:GetService("TextChatService")
+                    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                        TextChatService.OnIncomingMessage = function(message)
+                            local props = Instance.new("TextChatMessageProperties")
+                            if message.TextSource and message.TextSource.UserId == LocalPlayer.UserId then
+                                if BadgeActive then
+                                    props.PrefixText = LocalPlayer.DisplayName .. " " .. BADGE .. ":"
+                                else
+                                    props.PrefixText = LocalPlayer.DisplayName .. ":"
+                                end
+                            end
+                            return props
+                        end
+                    end
+                end)
+            else
+                for _, conn in ipairs(BadgeConnections) do
+                    pcall(function() conn:Disconnect() end)
+                end
+                table.clear(BadgeConnections)
+                for _, conn in ipairs(BadgeNametagConnections) do
+                    pcall(function() conn:Disconnect() end)
+                end
+                table.clear(BadgeNametagConnections)
+                local LocalPlayer = plr.LocalPlayer
+                local BADGE = utf8.char(0xE000)
+                local function RemoveBadgeFromObj(obj)
+                    if not obj.Text or obj.Text == "" then return end
+                    if obj.Text:find(BADGE, 1, true) then
+                        obj.Text = obj.Text:gsub(" " .. BADGE, "")
+                    end
+                end
+                for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+                        RemoveBadgeFromObj(v)
+                    end
+                end
+                pcall(function()
+                    local CoreGui = game:GetService("CoreGui")
+                    for _, v in ipairs(CoreGui:GetDescendants()) do
+                        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+                            RemoveBadgeFromObj(v)
+                        end
+                    end
+                end)
+                pcall(function()
+                    local TextChatService = game:GetService("TextChatService")
+                    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                        TextChatService.OnIncomingMessage = function(message)
+                            local props = Instance.new("TextChatMessageProperties")
+                            if message.TextSource and message.TextSource.UserId == LocalPlayer.UserId then
+                                props.PrefixText = LocalPlayer.DisplayName .. ":"
+                            end
+                            return props
+                        end
+                    end
+                end)
+            end
+        end
+    })
+
+    LeftBox:CreateToggle({
+        Name = "Headless",
+        Default = false,
+        Callback = function(Value)
+            HeadlessEnabled = Value
+            if Value then
+                if lib._localPlayer.Character then
+                    applyHeadless(lib._localPlayer.Character)
+                end
+                HeadlessConnection = lib._localPlayer.CharacterAdded:Connect(function(char)
+                    task.wait(1)
+                    if HeadlessEnabled then
+                        applyHeadless(char)
+                    end
+                end)
+            else
+                if HeadlessConnection then
+                    HeadlessConnection:Disconnect()
+                    HeadlessConnection = nil
+                end
+                if lib._localPlayer.Character then
+                    removeHeadless(lib._localPlayer.Character)
+                end
+            end
+        end
+    })
+
+    RightBox:CreateSection("Theme")
+
+    RightBox:CreateDropdown({
         Name = "Select Theme",
         Options = {"Dark", "White", "Pink"},
         Default = currentThemeName,
@@ -3168,14 +3241,6 @@ function Library._CreateConfigSection(tab)
                 Duration = 2,
                 Icon = "rbxassetid://10723356507"
             })
-        end
-    })
-
-    RightBox:CreateToggle({
-        Name = "Auto Save",
-        Default = false,
-        Callback = function(enabled)
-            lib:SetAutoSave(enabled)
         end
     })
 
