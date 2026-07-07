@@ -602,62 +602,100 @@ function SkulxBlur:Destroy()
     end
 end
 
-local function CreateGlassmorphismEffect(instance)
-    if not instance or not instance.Parent then return nil end
-    if instance:FindFirstChild("GlassmorphismEffect") then return instance:FindFirstChild("GlassmorphismEffect") end
+local GlassmorphismGui = nil
 
-    local effect = Instance.new("UIStroke")
-    effect.Name = "GlassmorphismEffect"
-    effect.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    effect.Color = Color3.fromRGB(255, 255, 255)
-    effect.Transparency = 0.85
-    effect.Thickness = 1
-    effect.Parent = instance
+local function CreateLiquidGlassmorphismUI()
+    if GlassmorphismGui then return GlassmorphismGui end
 
-    local corner = instance:FindFirstChildOfClass("UICorner")
-    if not corner then
-        corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 12)
-        corner.Parent = instance
+    GlassmorphismGui = Instance.new("ScreenGui")
+    GlassmorphismGui.Name = "SkulxGlassmorphism"
+    GlassmorphismGui.ResetOnSpawn = false
+    GlassmorphismGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    GlassmorphismGui.Parent = plr.LocalPlayer:WaitForChild("PlayerGui")
+
+    return GlassmorphismGui
+end
+
+local function CreateGlassOverlay(targetFrame, baseColor)
+    if not targetFrame or not targetFrame.Parent then return end
+    if targetFrame:FindFirstChild("GlassOverlay") then return targetFrame:FindFirstChild("GlassOverlay") end
+
+    local overlay = Instance.new("Frame")
+    overlay.Name = "GlassOverlay"
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    overlay.BackgroundTransparency = 0.92
+    overlay.BorderSizePixel = 0
+    overlay.ZIndex = targetFrame.ZIndex + 1
+    overlay.Parent = targetFrame
+
+    local corner = targetFrame:FindFirstChildOfClass("UICorner")
+    if corner then
+        local overlayCorner = Instance.new("UICorner")
+        overlayCorner.CornerRadius = corner.CornerRadius
+        overlayCorner.Parent = overlay
     end
 
-    local gradient = Instance.new("UIGradient")
-    gradient.Name = "GlassmorphismGradient"
-    gradient.Color = ColorSequence.new({
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "GlassStroke"
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Transparency = 0.7
+    stroke.Thickness = 1.5
+    stroke.Parent = overlay
+
+    local highlight = Instance.new("Frame")
+    highlight.Name = "GlassHighlight"
+    highlight.Size = UDim2.new(1, 0, 0.5, 0)
+    highlight.Position = UDim2.new(0, 0, 0, 0)
+    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    highlight.BackgroundTransparency = 0.95
+    highlight.BorderSizePixel = 0
+    highlight.ZIndex = overlay.ZIndex + 1
+    highlight.Parent = overlay
+
+    if corner then
+        local hlCorner = Instance.new("UICorner")
+        hlCorner.CornerRadius = corner.CornerRadius
+        hlCorner.Parent = highlight
+    end
+
+    local grad = Instance.new("UIGradient")
+    grad.Name = "GlassGradient"
+    grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 200)),
+        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
     })
-    gradient.Rotation = 45
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.9),
+    grad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.85),
         NumberSequenceKeypoint.new(0.5, 0.95),
-        NumberSequenceKeypoint.new(1, 0.9)
+        NumberSequenceKeypoint.new(1, 1)
     })
-    gradient.Parent = effect
+    grad.Rotation = 90
+    grad.Parent = highlight
 
-    return effect
+    return overlay
 end
 
-local function RemoveGlassmorphismEffect(instance)
-    if not instance then return end
-    local effect = instance:FindFirstChild("GlassmorphismEffect")
-    if effect then effect:Destroy() end
-    local gradient = instance:FindFirstChild("GlassmorphismGradient")
-    if gradient then gradient:Destroy() end
+local function RemoveGlassOverlay(targetFrame)
+    if not targetFrame then return end
+    local overlay = targetFrame:FindFirstChild("GlassOverlay")
+    if overlay then overlay:Destroy() end
 end
 
-local function ApplyGlassmorphismToGui(guiObject, enabled)
-    if not guiObject then return end
-    for _, child in ipairs(guiObject:GetDescendants()) do
-        if child:IsA("Frame") and child.Name ~= "NotificationContainer" and child.Name ~= "Container" then
-            if enabled then
-                CreateGlassmorphismEffect(child)
-                if child.BackgroundTransparency < 0.5 then
-                    child.BackgroundTransparency = 0.15
+local function ApplyGlassmorphismToContainer(container, enabled)
+    if not container then return end
+    for _, child in ipairs(container:GetDescendants()) do
+        if child:IsA("Frame") then
+            if child.Name == "Button_" or child.Name:find("Toggle_") or child.Name:find("Slider_") or child.Name:find("Dropdown_") or child.Name:find("TextBox_") or child.Name:find("Keybind_") or child.Name:find("ColorPicker_") or child.Name:find("Paragraph") then
+                if enabled then
+                    CreateGlassOverlay(child, c.Background)
+                    child.BackgroundTransparency = 0.3
+                else
+                    RemoveGlassOverlay(child)
+                    child.BackgroundTransparency = 0.4
                 end
-            else
-                RemoveGlassmorphismEffect(child)
             end
         end
     end
@@ -665,10 +703,26 @@ end
 
 local function ToggleGlassmorphism(enabled)
     GlassmorphismActive = enabled
+
     if enabled then
         local baseTheme = currentThemeName:gsub(" Glassmorphism", "")
+        if not Themes[baseTheme] then baseTheme = "Dark" end
         if not GlassmorphismVariants[baseTheme] then
-            baseTheme = "Dark"
+            GlassmorphismVariants[baseTheme] = {}
+            for k, v in pairs(Themes[baseTheme]) do
+                if typeof(v) == "Color3" then
+                    GlassmorphismVariants[baseTheme][k] = v
+                elseif typeof(v) == "table" then
+                    GlassmorphismVariants[baseTheme][k] = {}
+                    for sk, sv in pairs(v) do
+                        if typeof(sv) == "Color3" then
+                            GlassmorphismVariants[baseTheme][k][sk] = sv
+                        else
+                            GlassmorphismVariants[baseTheme][k][sk] = sv
+                        end
+                    end
+                end
+            end
         end
         c = GlassmorphismVariants[baseTheme]
         currentThemeName = baseTheme .. " Glassmorphism"
@@ -686,6 +740,13 @@ local function ToggleGlassmorphism(enabled)
             entry.instance[entry.property] = ResolveThemeColor(c, entry.path)
         else
             table.remove(ThemedInstances, i)
+        end
+    end
+
+    for _, libInstance in pairs(LibraryInstances or {}) do
+        if libInstance and libInstance.container then
+            ApplyGlassmorphismToContainer(libInstance.container, enabled)
+            ApplyGlassmorphismToContainer(libInstance.contentContainer, enabled)
         end
     end
 end
@@ -722,6 +783,9 @@ function Library.new(title, configFolder)
     self._autoSave = false
     self._currentConfig = "default"
     self._localPlayer = plr.LocalPlayer
+
+    if not LibraryInstances then LibraryInstances = {} end
+    table.insert(LibraryInstances, self)
     self._localPlayer = plr.LocalPlayer
     local autoLoadSettings = GetAutoLoadSettings()
     self._autoLoad = autoLoadSettings.enabled or false
@@ -2173,9 +2237,9 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedDisplay",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 6),
+        Position = UDim2.new(1, -165, 0, 6),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, 26),
+        Size = UDim2.new(0, 155, 0, 26),
         ZIndex = 2,
         Parent = frame
     })
@@ -2217,12 +2281,12 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 38),
+        Position = UDim2.new(1, -165, 0, 38),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalOptionsHeight + searchBoxHeight),
+        Size = UDim2.new(0, 155, 0, totalOptionsHeight + searchBoxHeight),
         Visible = false,
         ZIndex = 100,
-        ClipsDescendants = true,
+        ClipsDescendants = false,
         Parent = frame
     })
     CreateCorner(optionsContainer, 5)
@@ -2456,7 +2520,7 @@ function Library._CreateDropdown(tab, config)
             end
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
-            optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
+            optionsContainer.Size = UDim2.new(0, 155, 0, newTotalHeight)
         end
     }
 
@@ -3326,9 +3390,11 @@ function Library._CreateConfigSection(tab)
                     if Themes[baseTheme] then
                         ApplyTheme(baseTheme)
                     end
+                    task.wait(0.1)
                     ToggleGlassmorphism(true)
                 else
                     ToggleGlassmorphism(false)
+                    task.wait(0.1)
                     ApplyTheme(selected)
                 end
             end
