@@ -567,6 +567,7 @@ function Library.new(title, configFolder)
     self._autoSave = false
     self._currentConfig = "default"
     self._localPlayer = plr.LocalPlayer
+    self._localPlayer = plr.LocalPlayer
     local autoLoadSettings = GetAutoLoadSettings()
     self._autoLoad = autoLoadSettings.enabled or false
     if autoLoadSettings.config then
@@ -2863,7 +2864,7 @@ end
 function Library._CreateConfigSection(tab)
     local lib = tab._library
 
-    local LeftBox, RightBox = Library._CreateDualSection(tab, "Game", "Configuration")
+    local LeftBox, RightBox = Library._CreateDualSection(tab, "Game", "Theme")
 
     LeftBox:CreateButton({
         Name = "Rejoin",
@@ -2906,11 +2907,11 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    local spacer = Instance.new("Frame")
-    spacer.Name = "Spacer"
-    spacer.BackgroundTransparency = 1
-    spacer.Size = UDim2.new(1, 0, 0, 10)
-    spacer.Parent = LeftBox.content
+    local spacer1 = Instance.new("Frame")
+    spacer1.Name = "Spacer"
+    spacer1.BackgroundTransparency = 1
+    spacer1.Size = UDim2.new(1, 0, 0, 10)
+    spacer1.Parent = LeftBox.content
 
     local HeadlessEnabled = false
     local HeadlessConnection = nil
@@ -3162,8 +3163,6 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    RightBox:CreateSection("Theme")
-
     RightBox:CreateDropdown({
         Name = "Select Theme",
         Options = {"Dark", "White", "Pink"},
@@ -3175,6 +3174,14 @@ function Library._CreateConfigSection(tab)
             end
         end
     })
+
+    local spacer2 = Instance.new("Frame")
+    spacer2.Name = "Spacer"
+    spacer2.BackgroundTransparency = 1
+    spacer2.Size = UDim2.new(1, 0, 0, 10)
+    spacer2.Parent = RightBox.content
+
+    RightBox:CreateSection("Configuration")
 
     local configNameBox = RightBox:CreateTextBox({
         Name = "Config Name",
