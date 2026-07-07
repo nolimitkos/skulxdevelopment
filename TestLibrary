@@ -602,99 +602,86 @@ function SkulxBlur:Destroy()
     end
 end
 
-local GlassmorphismGui = nil
+local GlassmorphismConnections = {}
 
-local function CreateLiquidGlassmorphismUI()
-    if GlassmorphismGui then return GlassmorphismGui end
+local function AddGlassEffect(frame)
+    if not frame or frame:FindFirstChild("__GlassEffect") then return end
 
-    GlassmorphismGui = Instance.new("ScreenGui")
-    GlassmorphismGui.Name = "SkulxGlassmorphism"
-    GlassmorphismGui.ResetOnSpawn = false
-    GlassmorphismGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    GlassmorphismGui.Parent = plr.LocalPlayer:WaitForChild("PlayerGui")
+    local glass = Instance.new("Frame")
+    glass.Name = "__GlassEffect"
+    glass.Size = UDim2.new(1, 0, 1, 0)
+    glass.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    glass.BackgroundTransparency = 0.75
+    glass.BorderSizePixel = 0
+    glass.ZIndex = frame.ZIndex + 5
+    glass.Parent = frame
 
-    return GlassmorphismGui
-end
-
-local function CreateGlassOverlay(targetFrame, baseColor)
-    if not targetFrame or not targetFrame.Parent then return end
-    if targetFrame:FindFirstChild("GlassOverlay") then return targetFrame:FindFirstChild("GlassOverlay") end
-
-    local overlay = Instance.new("Frame")
-    overlay.Name = "GlassOverlay"
-    overlay.Size = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    overlay.BackgroundTransparency = 0.92
-    overlay.BorderSizePixel = 0
-    overlay.ZIndex = targetFrame.ZIndex + 1
-    overlay.Parent = targetFrame
-
-    local corner = targetFrame:FindFirstChildOfClass("UICorner")
+    local corner = frame:FindFirstChildOfClass("UICorner")
     if corner then
-        local overlayCorner = Instance.new("UICorner")
-        overlayCorner.CornerRadius = corner.CornerRadius
-        overlayCorner.Parent = overlay
+        local gc = Instance.new("UICorner")
+        gc.CornerRadius = corner.CornerRadius
+        gc.Parent = glass
     end
 
     local stroke = Instance.new("UIStroke")
-    stroke.Name = "GlassStroke"
+    stroke.Name = "__GlassStroke"
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Transparency = 0.7
-    stroke.Thickness = 1.5
-    stroke.Parent = overlay
+    stroke.Transparency = 0.5
+    stroke.Thickness = 1.2
+    stroke.Parent = glass
 
-    local highlight = Instance.new("Frame")
-    highlight.Name = "GlassHighlight"
-    highlight.Size = UDim2.new(1, 0, 0.5, 0)
-    highlight.Position = UDim2.new(0, 0, 0, 0)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    highlight.BackgroundTransparency = 0.95
-    highlight.BorderSizePixel = 0
-    highlight.ZIndex = overlay.ZIndex + 1
-    highlight.Parent = overlay
+    local shine = Instance.new("Frame")
+    shine.Name = "__GlassShine"
+    shine.Size = UDim2.new(1, 0, 0.45, 0)
+    shine.Position = UDim2.new(0, 0, 0, 0)
+    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    shine.BackgroundTransparency = 0.8
+    shine.BorderSizePixel = 0
+    shine.ZIndex = glass.ZIndex + 1
+    shine.Parent = glass
 
     if corner then
-        local hlCorner = Instance.new("UICorner")
-        hlCorner.CornerRadius = corner.CornerRadius
-        hlCorner.Parent = highlight
+        local sc = Instance.new("UICorner")
+        sc.CornerRadius = corner.CornerRadius
+        sc.Parent = shine
     end
 
     local grad = Instance.new("UIGradient")
-    grad.Name = "GlassGradient"
     grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
     })
     grad.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.85),
-        NumberSequenceKeypoint.new(0.5, 0.95),
+        NumberSequenceKeypoint.new(0, 0.6),
+        NumberSequenceKeypoint.new(0.5, 0.9),
         NumberSequenceKeypoint.new(1, 1)
     })
     grad.Rotation = 90
-    grad.Parent = highlight
+    grad.Parent = shine
 
-    return overlay
+    frame.BackgroundTransparency = 0.15
 end
 
-local function RemoveGlassOverlay(targetFrame)
-    if not targetFrame then return end
-    local overlay = targetFrame:FindFirstChild("GlassOverlay")
-    if overlay then overlay:Destroy() end
+local function RemoveGlassEffect(frame)
+    if not frame then return end
+    local glass = frame:FindFirstChild("__GlassEffect")
+    if glass then glass:Destroy() end
+    if frame.BackgroundTransparency < 0.5 then
+        frame.BackgroundTransparency = 0.4
+    end
 end
 
-local function ApplyGlassmorphismToContainer(container, enabled)
-    if not container then return end
-    for _, child in ipairs(container:GetDescendants()) do
-        if child:IsA("Frame") then
-            if child.Name == "Button_" or child.Name:find("Toggle_") or child.Name:find("Slider_") or child.Name:find("Dropdown_") or child.Name:find("TextBox_") or child.Name:find("Keybind_") or child.Name:find("ColorPicker_") or child.Name:find("Paragraph") then
+local function ScanAndApplyGlass(parent, enabled)
+    if not parent then return end
+    for _, child in ipairs(parent:GetDescendants()) do
+        if child:IsA("Frame") and child.Parent then
+            local name = child.Name
+            if name:find("Button_") or name:find("Toggle_") or name:find("Slider_") or name:find("Dropdown_") or name:find("TextBox_") or name:find("Keybind_") or name:find("ColorPicker_") or name:find("Paragraph") or name == "SectionContent" then
                 if enabled then
-                    CreateGlassOverlay(child, c.Background)
-                    child.BackgroundTransparency = 0.3
+                    AddGlassEffect(child)
                 else
-                    RemoveGlassOverlay(child)
-                    child.BackgroundTransparency = 0.4
+                    RemoveGlassEffect(child)
                 end
             end
         end
@@ -704,9 +691,10 @@ end
 local function ToggleGlassmorphism(enabled)
     GlassmorphismActive = enabled
 
+    local baseTheme = currentThemeName:gsub(" Glassmorphism", "")
+    if not Themes[baseTheme] then baseTheme = "Dark" end
+
     if enabled then
-        local baseTheme = currentThemeName:gsub(" Glassmorphism", "")
-        if not Themes[baseTheme] then baseTheme = "Dark" end
         if not GlassmorphismVariants[baseTheme] then
             GlassmorphismVariants[baseTheme] = {}
             for k, v in pairs(Themes[baseTheme]) do
@@ -727,7 +715,6 @@ local function ToggleGlassmorphism(enabled)
         c = GlassmorphismVariants[baseTheme]
         currentThemeName = baseTheme .. " Glassmorphism"
     else
-        local baseTheme = currentThemeName:gsub(" Glassmorphism", "")
         if Themes[baseTheme] then
             c = Themes[baseTheme]
             currentThemeName = baseTheme
@@ -745,8 +732,13 @@ local function ToggleGlassmorphism(enabled)
 
     for _, libInstance in pairs(LibraryInstances or {}) do
         if libInstance and libInstance.container then
-            ApplyGlassmorphismToContainer(libInstance.container, enabled)
-            ApplyGlassmorphismToContainer(libInstance.contentContainer, enabled)
+            ScanAndApplyGlass(libInstance.container, enabled)
+            if libInstance.contentContainer then
+                ScanAndApplyGlass(libInstance.contentContainer, enabled)
+            end
+            if libInstance.mainContent then
+                ScanAndApplyGlass(libInstance.mainContent, enabled)
+            end
         end
     end
 end
@@ -2237,9 +2229,9 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedDisplay",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -165, 0, 6),
+        Position = UDim2.new(1, -200, 0, 6),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 155, 0, 26),
+        Size = UDim2.new(0, 190, 0, 26),
         ZIndex = 2,
         Parent = frame
     })
@@ -2281,9 +2273,9 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -165, 0, 38),
+        Position = UDim2.new(1, -200, 0, 38),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 155, 0, totalOptionsHeight + searchBoxHeight),
+        Size = UDim2.new(0, 190, 0, totalOptionsHeight + searchBoxHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = false,
@@ -2520,7 +2512,7 @@ function Library._CreateDropdown(tab, config)
             end
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
-            optionsContainer.Size = UDim2.new(0, 155, 0, newTotalHeight)
+            optionsContainer.Size = UDim2.new(0, 190, 0, newTotalHeight)
         end
     }
 
@@ -2984,7 +2976,7 @@ function Library._CreateTextBox(tab, config)
         Image = "rbxassetid://93828793199781",
         ImageColor3 = c.TextDark,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -165, 0.5, 0),
+        Position = UDim2.new(1, -135, 0.5, 0),
         Size = UDim2.new(0, 18, 0, 18),
         Parent = frame
     })
@@ -2996,7 +2988,7 @@ function Library._CreateTextBox(tab, config)
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -10, 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, s.TextBox.InputWidth, 0, 26),
+        Size = UDim2.new(0, 120, 0, 26),
         Parent = frame
     })
     CreateCorner(textBoxContainer, 5)
