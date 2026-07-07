@@ -1146,7 +1146,6 @@ function Library:Destroy()
     end
 end
 
-
 function Library:_RegisterConfigElement(id, elementType, getValue, setValue)
     self._configElements[id] = {
         type = elementType,
