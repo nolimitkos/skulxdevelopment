@@ -391,7 +391,6 @@ function SkulxBlur:_CreateDepthOfField()
     if existingBlur then
         existingBlur:Destroy()
     end
-    
     local dof = CreateInstance("DepthOfFieldEffect", {
         Name = "SkulxBlur",
         FarIntensity = 0,
@@ -400,7 +399,6 @@ function SkulxBlur:_CreateDepthOfField()
         NearIntensity = 0.5, 
         Parent = lg
     })
-    
     self._dof = dof
     return dof
 end
@@ -568,6 +566,7 @@ function Library.new(title, configFolder)
     self._configElements = {}
     self._autoSave = false
     self._currentConfig = "default"
+    self._localPlayer = plr.LocalPlayer
     local autoLoadSettings = GetAutoLoadSettings()
     self._autoLoad = autoLoadSettings.enabled or false
     if autoLoadSettings.config then
@@ -681,11 +680,9 @@ end
 function Library:Toggle()
     self._visible = not self._visible
     self.container.Visible = self._visible
-    
     if self._acrylicBlur then
         self._acrylicBlur:SetEnabled(self._visible)
     end
-    
     if self._mobileToggle then
         self._mobileToggle.Visible = not self._visible
     end
@@ -711,10 +708,8 @@ function Library:_SetupMobileSupport()
     })
     CreateCorner(mobileButton, 16)
     CreateStroke(mobileButton)
-    
     local dragging = false
     local dragStart, startPos
-    
     mobileButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -722,7 +717,6 @@ function Library:_SetupMobileSupport()
             startPos = mobileButton.Position
         end
     end)
-    
     mobileButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             if dragging then
@@ -734,7 +728,6 @@ function Library:_SetupMobileSupport()
             dragging = false
         end
     end)
-    
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             local delta = input.Position - dragStart
@@ -746,9 +739,7 @@ function Library:_SetupMobileSupport()
             )
         end
     end)
-    
     self._mobileToggle = mobileButton
-    
     if IsMobileDevice() then
         mobileButton.Visible = not self._visible
     end
@@ -1136,7 +1127,6 @@ function Library:Destroy()
     if self._autoSave then
         self:SaveConfig(self._currentConfig)
     end
-    
     DisconnectAll()
     if self._acrylicBlur then
         self._acrylicBlur:Destroy()
@@ -1145,6 +1135,7 @@ function Library:Destroy()
         self.screenGui:Destroy()
     end
 end
+
 
 function Library:_RegisterConfigElement(id, elementType, getValue, setValue)
     self._configElements[id] = {
@@ -1163,26 +1154,20 @@ function Library:SaveConfig(configName)
         })
         return false
     end
-    
     EnsureConfigFolder()
-    
     local configData = {}
     for id, element in pairs(self._configElements) do
         local value = element.getValue()
-        
         if typeof(value) == "Color3" then
             value = {R = value.R, G = value.G, B = value.B, _type = "Color3"}
         elseif typeof(value) == "EnumItem" then
             value = {_type = "EnumItem", _enum = tostring(value.EnumType), _value = value.Name}
         end
-        
         configData[id] = value
     end
-    
     local success, err = pcall(function()
         writefile("SkulxConfigs/" .. configName .. ".json", hs:JSONEncode(configData))
     end)
-    
     if success then
         self._currentConfig = configName
         if self._autoLoad then
@@ -1214,7 +1199,6 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
     local path = "SkulxConfigs/" .. configName .. ".json"
     if not isfile(path) then
         self:Notify({
@@ -1224,11 +1208,9 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
     local success, data = pcall(function()
         return hs:JSONDecode(readfile(path))
     end)
-    
     if not success or not data then
         self:Notify({
             Title = "Error",
@@ -1237,7 +1219,6 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    
     for id, value in pairs(data) do
         if self._configElements[id] then
             if type(value) == "table" and value._type == "Color3" then
@@ -1245,13 +1226,11 @@ function Library:LoadConfig(configName)
             elseif type(value) == "table" and value._type == "EnumItem" then
                 value = Enum[value._enum][value._value]
             end
-            
             pcall(function()
                 self._configElements[id].setValue(value)
             end)
         end
     end
-    
     self._currentConfig = configName
     self:Notify({
         Title = "Config Loaded",
@@ -1266,7 +1245,6 @@ function Library:DeleteConfig(configName)
     if not delfile or not isfile then
         return false
     end
-    
     local path = "SkulxConfigs/" .. configName .. ".json"
     if isfile(path) then
         delfile(path)
@@ -1502,25 +1480,20 @@ function Library._CreateTab(section, name, icon)
 end
 
 function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient)
-    
     if lib.currentTab then
         lib.currentTab.content.Visible = false
         CreateTween(lib.currentTab.button, {BackgroundTransparency = 1}, animationspeed.Fast)
         CreateTween(lib.currentTab.icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
         lib.currentTab.stroke.Transparency = 1
-        
         if lib.currentTab.textGradient then
             lib.currentTab.textGradient.Enabled = true
         end
     end
-    
     lib.currentTab = tab
     tab.content.Visible = true
-    
     CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
     CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
     stroke.Transparency = 1  
-    
     if textGradient then
         textGradient.Enabled = false
     end
@@ -2837,7 +2810,6 @@ function Library._CreateTextBox(tab, config)
         CreateTween(textBoxContainer, {BackgroundTransparency = 0.04}, animationspeed.Fast)
         CreateTween(textBoxStroke, {Color = c.Border}, animationspeed.Fast)
         CreateTween(icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
-        
         if numbersOnly then
             local numValue = tonumber(textBox.Text)
             if numValue then
@@ -2849,7 +2821,6 @@ function Library._CreateTextBox(tab, config)
         else
             currentText = textBox.Text
         end
-        
         callback(currentText, enterPressed)
     end)
 
@@ -2892,9 +2863,235 @@ end
 function Library._CreateConfigSection(tab)
     local lib = tab._library
 
-    Library._CreateContentSection(tab, "Theme")
+    local LeftBox, RightBox = Library._CreateDualSection(tab, "Character", "Configuration")
 
-    Library._CreateDropdown(tab, {
+    local HeadlessEnabled = false
+    local HeadlessConnection = nil
+    local HEADLESS_MESH_ID = "rbxassetid://1095708"
+
+    local function applyHeadless(character)
+        local head = character:FindFirstChild("Head")
+        if not head then return end
+        head.Transparency = 1
+        head.CanCollide = false
+        local face = head:FindFirstChildOfClass("Decal")
+        if face then face:Destroy() end
+        for _, v in ipairs(head:GetChildren()) do
+            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
+                v:Destroy()
+            end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.FileMesh
+        mesh.MeshId = HEADLESS_MESH_ID
+        mesh.Scale = Vector3.new(0.001, 0.001, 0.001)
+        mesh.Parent = head
+    end
+
+    local function removeHeadless(character)
+        local head = character:FindFirstChild("Head")
+        if not head then return end
+        head.Transparency = 0
+        head.CanCollide = true
+        for _, v in ipairs(head:GetChildren()) do
+            if v:IsA("SpecialMesh") or v:IsA("CharacterMesh") then
+                v:Destroy()
+            end
+        end
+        local mesh = Instance.new("SpecialMesh")
+        mesh.Parent = head
+    end
+
+    LeftBox:CreateToggle({
+        Name = "Verified Badge",
+        Default = false,
+        Callback = function(Value)
+            if Value then
+                local LocalPlayer = plr.LocalPlayer
+                local BADGE = utf8.char(0xE000)
+                local function IsLocalPlayerDisplayName(displayName)
+                    return LocalPlayer and LocalPlayer.DisplayName == displayName
+                end
+                local function IsChatMenu(obj)
+                    if not obj then return false end
+                    local current = obj
+                    for i = 1, 15 do
+                        if not current then break end
+                        if current.Name then
+                            local name = current.Name:lower()
+                            if name:find("chat") and (name:find("window") or name:find("menu") or name:find("bubble") or name:find("input")) then
+                                return true
+                            end
+                            if name == "textchatchatwindow" or name == "chatwindow" or name == "chatinputbar" or name == "chatchannelselector" then
+                                return true
+                            end
+                        end
+                        if current.Parent then
+                            current = current.Parent
+                        else
+                            break
+                        end
+                    end
+                    return false
+                end
+                local function SpoofAndBadge(obj)
+                    if not obj.Text or obj.Text == "" or obj:GetAttribute("Badged") then return end
+                    if IsChatMenu(obj) then return end
+                    local updated = false
+                    local currentText = obj.Text
+                    local displayName = LocalPlayer.DisplayName
+                    local userName = LocalPlayer.Name
+                    if currentText == userName then return end
+                    if currentText:find(displayName, 1, true) and not currentText:find(BADGE, 1, true) then
+                        local newText = currentText:gsub(
+                            displayName:gsub("([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1"),
+                            function(match)
+                                local prefix = currentText:sub(1, currentText:find(match, 1, true) - 1)
+                                local senderDisplayName = prefix:match("^(.-)%s*:")
+                                if senderDisplayName and not IsLocalPlayerDisplayName(senderDisplayName) then
+                                    return match
+                                end
+                                return match .. " " .. BADGE
+                            end
+                        )
+                        if newText ~= currentText then
+                            currentText = newText
+                            updated = true
+                        end
+                    end
+                    if updated then
+                        obj:SetAttribute("Badged", true)
+                        obj.Text = currentText
+                        obj:SetAttribute("Badged", nil)
+                    end
+                end
+                local function MonitorObject(obj)
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                        task.defer(SpoofAndBadge, obj)
+                        obj:GetPropertyChangedSignal("Text"):Connect(function()
+                            SpoofAndBadge(obj)
+                        end)
+                    end
+                end
+                for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                    MonitorObject(v)
+                end
+                LocalPlayer.PlayerGui.DescendantAdded:Connect(MonitorObject)
+                pcall(function()
+                    local CoreGui = game:GetService("CoreGui")
+                    for _, v in ipairs(CoreGui:GetDescendants()) do
+                        MonitorObject(v)
+                    end
+                    CoreGui.DescendantAdded:Connect(MonitorObject)
+                end)
+                local function SetupNametag(char)
+                    local player = plr:GetPlayerFromCharacter(char)
+                    local humanoid = char:WaitForChild("Humanoid", 10)
+                    if not humanoid then return end
+                    if player == LocalPlayer then
+                        humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                    else
+                        if player == LocalPlayer then
+                            humanoid.DisplayName = player.DisplayName .. " " .. BADGE
+                        end
+                    end
+                end
+                for _, p in ipairs(plr:GetPlayers()) do
+                    if p.Character then task.spawn(SetupNametag, p.Character) end
+                    p.CharacterAdded:Connect(SetupNametag)
+                end
+                plr.PlayerAdded:Connect(function(p)
+                    p.CharacterAdded:Connect(SetupNametag)
+                end)
+                pcall(function()
+                    local TextChatService = game:GetService("TextChatService")
+                    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+                        TextChatService.OnIncomingMessage = function(message)
+                            local props = Instance.new("TextChatMessageProperties")
+                            if message.TextSource and message.TextSource.UserId == LocalPlayer.UserId then
+                                props.PrefixText = LocalPlayer.DisplayName .. " " .. BADGE .. ":"
+                            end
+                            return props
+                        end
+                    end
+                end)
+            end
+        end
+    })
+
+    LeftBox:CreateToggle({
+        Name = "Headless",
+        Default = false,
+        Callback = function(Value)
+            HeadlessEnabled = Value
+            if Value then
+                if lib._localPlayer.Character then
+                    applyHeadless(lib._localPlayer.Character)
+                end
+                HeadlessConnection = lib._localPlayer.CharacterAdded:Connect(function(char)
+                    task.wait(1)
+                    if HeadlessEnabled then
+                        applyHeadless(char)
+                    end
+                end)
+            else
+                if HeadlessConnection then
+                    HeadlessConnection:Disconnect()
+                    HeadlessConnection = nil
+                end
+                if lib._localPlayer.Character then
+                    removeHeadless(lib._localPlayer.Character)
+                end
+            end
+        end
+    })
+
+    LeftBox:CreateSection("Game")
+
+    LeftBox:CreateButton({
+        Name = "Rejoin",
+        Callback = function()
+            local ts = game:GetService("TeleportService")
+            local placeId = game.PlaceId
+            local jobId = game.JobId
+            ts:TeleportToPlaceInstance(placeId, jobId, plr.LocalPlayer)
+        end
+    })
+
+    LeftBox:CreateButton({
+        Name = "ServerHop",
+        Callback = function()
+            local ts = game:GetService("TeleportService")
+            local placeId = game.PlaceId
+            local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+            local success, result = pcall(function()
+                return game:GetService("HttpService"):JSONDecode(game:HttpGet(url))
+            end)
+            if success and result and result.data then
+                local servers = {}
+                for _, server in ipairs(result.data) do
+                    if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                        table.insert(servers, server)
+                    end
+                end
+                if #servers > 0 then
+                    table.sort(servers, function(a, b)
+                        return a.playing > b.playing
+                    end)
+                    local target = servers[1]
+                    ts:TeleportToPlaceInstance(placeId, target.id, plr.LocalPlayer)
+                else
+                    lib:Notify({ Title = "ServerHop", Description = "No suitable servers found", Duration = 3 })
+                end
+            else
+                lib:Notify({ Title = "ServerHop", Description = "Failed to fetch servers", Duration = 3 })
+            end
+        end
+    })
+
+    LeftBox:CreateSection("Theme")
+
+    LeftBox:CreateDropdown({
         Name = "Select Theme",
         Options = {"Dark", "White", "Pink"},
         Default = currentThemeName,
@@ -2906,9 +3103,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateContentSection(tab, "Configuration")
-
-    local configNameBox = Library._CreateTextBox(tab, {
+    local configNameBox = RightBox:CreateTextBox({
         Name = "Config Name",
         Default = "default",
         Placeholder = "Enter config name...",
@@ -2918,7 +3113,7 @@ function Library._CreateConfigSection(tab)
     })
 
     local configDropdown
-    configDropdown = Library._CreateDropdown(tab, {
+    configDropdown = RightBox:CreateDropdown({
         Name = "Select Config",
         Options = lib:GetConfigs(),
         Default = "default",
@@ -2931,7 +3126,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateButton(tab, {
+    RightBox:CreateButton({
         Name = "Save Config",
         Callback = function()
             local configName = configNameBox:GetText()
@@ -2942,7 +3137,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateButton(tab, {
+    RightBox:CreateButton({
         Name = "Load Config",
         Callback = function()
             local configName = configNameBox:GetText()
@@ -2952,7 +3147,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateButton(tab, {
+    RightBox:CreateButton({
         Name = "Delete Config",
         Callback = function()
             local configName = configNameBox:GetText()
@@ -2963,7 +3158,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateButton(tab, {
+    RightBox:CreateButton({
         Name = "Refresh Configs",
         Callback = function()
             configDropdown:Refresh(lib:GetConfigs())
@@ -2976,7 +3171,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateToggle(tab, {
+    RightBox:CreateToggle({
         Name = "Auto Save",
         Default = false,
         Callback = function(enabled)
@@ -2984,7 +3179,7 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    Library._CreateToggle(tab, {
+    RightBox:CreateToggle({
         Name = "Auto Load Config",
         Default = lib._autoLoad or false,
         Callback = function(enabled)
