@@ -70,7 +70,6 @@ local Themes = {
 
 local c = Themes.Dark
 local currentThemeName = "Dark"
-local _currentStyle = "Non Transparent"
 local ThemedInstances = {}
 
 local function GetThemeKeyPath(colorValue)
@@ -130,47 +129,6 @@ local function ApplyTheme(themeName)
         end
     end
 end
-
-local StyleInstances = {}
-
-local function TrackStyleInstance(instance, property, defaultValue)
-    table.insert(StyleInstances, {
-        instance = instance,
-        property = property,
-        defaultValue = defaultValue
-    })
-end
-
-local function ApplyStyle(styleName)
-    _currentStyle = styleName
-    for i = #StyleInstances, 1, -1 do
-        local entry = StyleInstances[i]
-        if entry.instance and entry.instance.Parent then
-            if styleName == "Liquid Glassmorphism" then
-                if entry.property == "BackgroundTransparency" then
-                    entry.instance[entry.property] = 0.6
-                elseif entry.property == "BackgroundColor3" then
-                    entry.instance[entry.property] = c.Background
-                end
-            elseif styleName == "Transparent" then
-                if entry.property == "BackgroundTransparency" then
-                    entry.instance[entry.property] = 0.85
-                elseif entry.property == "BackgroundColor3" then
-                    entry.instance[entry.property] = c.Background
-                end
-            elseif styleName == "Non Transparent" then
-                if entry.property == "BackgroundTransparency" then
-                    entry.instance[entry.property] = entry.defaultValue
-                elseif entry.property == "BackgroundColor3" then
-                    entry.instance[entry.property] = entry.defaultValue
-                end
-            end
-        else
-            table.remove(StyleInstances, i)
-        end
-    end
-end
-
 
 local IsMobile = ui.TouchEnabled and not ui.KeyboardEnabled
 
@@ -258,11 +216,6 @@ local function CreateInstance(className, properties)
                 local path = explicitPath or GetThemeKeyPath(value)
                 if path then
                     TrackThemedProperty(instance, property, path)
-                end
-            end
-            if property == "BackgroundColor3" or property == "BackgroundTransparency" then
-                if className == "Frame" or className == "TextLabel" or className == "TextButton" or className == "ImageLabel" or className == "ImageButton" or className == "TextBox" then
-                    TrackStyleInstance(instance, property, value)
                 end
             end
         end
@@ -2812,7 +2765,7 @@ function Library._CreateTextBox(tab, config)
         Image = "rbxassetid://93828793199781",
         ImageColor3 = c.TextDark,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -165, 0.5, 0),
+        Position = UDim2.new(1, -105, 0.5, 0),
         Size = UDim2.new(0, 18, 0, 18),
         Parent = frame
     })
@@ -3218,18 +3171,6 @@ function Library._CreateConfigSection(tab)
         Callback = function(selected)
             if type(selected) == "string" then
                 ApplyTheme(selected)
-            end
-        end
-    })
-
-    RightBox:CreateDropdown({
-        Name = "Select Style",
-        Options = {"Liquid Glassmorphism", "Transparent", "Non Transparent"},
-        Default = _currentStyle,
-        MultiSelect = false,
-        Callback = function(selected)
-            if type(selected) == "string" then
-                ApplyStyle(selected)
             end
         end
     })
