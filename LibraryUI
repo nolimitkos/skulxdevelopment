@@ -2062,13 +2062,13 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(0, 0, 0, 0),
+        Position = UDim2.new(1, -145, 0, 38),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, totalOptionsHeight + searchBoxHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
-        Parent = tab.content:FindFirstAncestorOfClass("ScreenGui") or frame
+        Parent = frame
     })
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
@@ -2255,22 +2255,11 @@ function Library._CreateDropdown(tab, config)
     toggleBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         expanded = not expanded
+        optionsContainer.Visible = expanded
         if expanded then
-            local framePos = frame.AbsolutePosition
-            local frameSize = frame.AbsoluteSize
-            local viewport = workspace.CurrentCamera.ViewportSize
-            local targetX = framePos.X + frameSize.X - 135
-            local targetY = framePos.Y + frameSize.Y + 2
-            if targetY + optionsContainer.AbsoluteSize.Y > viewport.Y then
-                targetY = framePos.Y - optionsContainer.AbsoluteSize.Y - 2
-            end
-            if targetX < 0 then targetX = 0 end
-            if targetX + 135 > viewport.X then targetX = viewport.X - 135 end
-            optionsContainer.Position = UDim2.new(0, targetX, 0, targetY)
             searchBox.Text = ""
             FilterOptions("")
         end
-        optionsContainer.Visible = expanded
         CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
         frame.ZIndex = expanded and 10 or 1
     end)
@@ -2312,7 +2301,7 @@ function Library._CreateDropdown(tab, config)
             end
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
-            optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight + searchBoxHeight)
+            optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
         end
     }
 
@@ -2918,12 +2907,6 @@ function Library._CreateConfigSection(tab)
         end
     })
 
-    local spacer0 = Instance.new("Frame")
-    spacer0.Name = "Spacer"
-    spacer0.BackgroundTransparency = 1
-    spacer0.Size = UDim2.new(1, 0, 0, 10)
-    spacer0.Parent = LeftBox.content
-
     local spacer1 = Instance.new("Frame")
     spacer1.Name = "Spacer"
     spacer1.BackgroundTransparency = 1
@@ -2970,6 +2953,12 @@ function Library._CreateConfigSection(tab)
     local BadgeActive = false
     local BadgeConnections = {}
     local BadgeNametagConnections = {}
+
+    local spacerVB = Instance.new("Frame")
+    spacerVB.Name = "Spacer"
+    spacerVB.BackgroundTransparency = 1
+    spacerVB.Size = UDim2.new(1, 0, 0, 10)
+    spacerVB.Parent = LeftBox.content
 
     LeftBox:CreateToggle({
         Name = "Verified Badge",
