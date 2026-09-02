@@ -5,7 +5,6 @@ local lg = game:GetService("Lighting")
 local rs = game:GetService("RunService")
 local gs = game:GetService("GuiService")
 local hs = game:GetService("HttpService")
-local tsvc = game:GetService("TextService")
 
 local n = "Skulx"
 
@@ -267,6 +266,17 @@ local function IsMobileDevice()
     return IsMobile
 end
 
+function Library._AddSpacer(parent, config)
+    if config.Space and config.Space > 0 then
+        CreateInstance("Frame", {
+            Name = "Spacer",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, config.Space),
+            Parent = parent
+        })
+    end
+end
+
 local function MakeDraggable(frame, handle)
     local dragging = false
     local dragInput, dragStart, startPos
@@ -320,12 +330,12 @@ local function DisconnectAll()
     Connections = {}
 end
 
--- Configs are namespaced per-game (by PlaceId) so a config saved in one game
--- (e.g. Prison Life) never shows up or gets loaded in a different game.
-local GameConfigRoot = "SkulxConfigs/" .. tostring(game.PlaceId)
+local function GetGameConfigFolder()
+    return "SkulxConfigs/" .. tostring(game.PlaceId)
+end
 
 local function GetConfigFolder(configName)
-    return GameConfigRoot .. "/" .. configName
+    return GetGameConfigFolder() .. "/" .. configName
 end
 
 local function EnsureConfigFolder()
@@ -333,8 +343,9 @@ local function EnsureConfigFolder()
         if not isfolder("SkulxConfigs") then
             makefolder("SkulxConfigs")
         end
-        if not isfolder(GameConfigRoot) then
-            makefolder(GameConfigRoot)
+        local gameFolder = GetGameConfigFolder()
+        if not isfolder(gameFolder) then
+            makefolder(gameFolder)
         end
     end
 end
@@ -343,9 +354,9 @@ local function GetAvailableConfigs()
     local configs = {}
     if isfolder and listfiles then
         EnsureConfigFolder()
-        local files = listfiles(GameConfigRoot)
+        local files = listfiles(GetGameConfigFolder())
         for _, file in ipairs(files) do
-            local name = file:match("/([^/\\]+)%.json$")
+            local name = file:match("([^/\\]+)%.json$")
             if name and name ~= "_autoload" then
                 table.insert(configs, name)
             end
@@ -358,14 +369,14 @@ local function SaveAutoLoadSettings(data)
     if not writefile then return end
     EnsureConfigFolder()
     pcall(function()
-        writefile(GameConfigRoot .. "/_autoload.json", hs:JSONEncode(data))
+        writefile(GetGameConfigFolder() .. "/_autoload.json", hs:JSONEncode(data))
     end)
 end
 
 local function GetAutoLoadSettings()
     if not readfile or not isfile then return {enabled = false, config = "default"} end
     EnsureConfigFolder()
-    local path = GameConfigRoot .. "/_autoload.json"
+    local path = GetGameConfigFolder() .. "/_autoload.json"
     if not isfile(path) then return {enabled = false, config = "default"} end
     local success, data = pcall(function()
         return hs:JSONDecode(readfile(path))
@@ -759,7 +770,7 @@ end
 function Library:_CreateMainv0rtexd()
     self.screenGui = CreateInstance("ScreenGui", {
         Name = "Skulx",
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
         ResetOnSpawn = false
     })
 
@@ -1443,8 +1454,8 @@ function Library._CreateTab(section, name, icon)
 
     local tabMethods = setmetatable({}, {__index = tab})
 
-    function tabMethods:CreateSection(sectionName)
-        return Library._CreateContentSection(self, sectionName)
+    function tabMethods:CreateSection(sectionName, label)
+        return Library._CreateContentSection(self, sectionName, label)
     end
 
     function tabMethods:CreateParagraph(config)
@@ -1483,14 +1494,6 @@ function Library._CreateTab(section, name, icon)
         return Library._CreateConfigSection(self)
     end
 
-    function tabMethods:CreateSpace(height)
-        return Library._CreateSpace(self, height)
-    end
-
-    function tabMethods:CreateLabel(text)
-        return Library._CreateLabel(self, text)
-    end
-
     function tabMethods:CreateDualSection(leftName, rightName)
         return Library._CreateDualSection(self, leftName, rightName)
     end
@@ -1519,7 +1522,7 @@ function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient
     textLabel.TextColor3 = c.Text
 end
 
-function Library._CreateContentSection(tab, name)
+function Library._CreateContentSection(tab, name, label)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
         Font = f.Regular,
@@ -1531,37 +1534,23 @@ function Library._CreateContentSection(tab, name)
         Size = UDim2.new(1, 0, 0, 25),
         Parent = tab.content
     })
+
+    if label and label ~= "" then
+        CreateInstance("TextLabel", {
+            Name = "SectionLabel",
+            Font = f.Regular,
+            TextColor3 = c.TextDark,
+            TextTransparency = 0.35,
+            Text = label,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+            TextSize = textsize.Tiny,
+            Size = UDim2.new(1, 0, 0, 14),
+            Parent = tab.content
+        })
+    end
+
     return section
-end
-
--- Manual spacing: drop this between any two elements (e.g. after a Toggle)
--- when you want a visible gap. Height defaults to 10px.
-function Library._CreateSpace(tab, height)
-    return CreateInstance("Frame", {
-        Name = "Space",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, height or 10),
-        Parent = tab.content
-    })
-end
-
--- A small caption/label you can drop inside an existing section, without
--- opening a whole new section (the section itself stays the same size,
--- only the label text is small).
-function Library._CreateLabel(tab, text)
-    return CreateInstance("TextLabel", {
-        Name = "Label",
-        Font = f.Regular,
-        TextColor3 = c.TextDark,
-        Text = text or "",
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
-        BackgroundTransparency = 1,
-        TextSize = textsize.Tiny,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = tab.content
-    })
 end
 
 function Library._CreateDualSection(tab, leftName, rightName)
@@ -1596,7 +1585,7 @@ function Library._CreateDualSection(tab, leftName, rightName)
         local methods = {}
         local currentFrame
 
-        local function NewSubSection(sectionName)
+        local function NewSubSection(sectionName, label)
             CreateInstance("TextLabel", {
                 Name = "SectionLabel",
                 Font = f.Regular,
@@ -1608,6 +1597,21 @@ function Library._CreateDualSection(tab, leftName, rightName)
                 Size = UDim2.new(1, 0, 0, 20),
                 Parent = column
             })
+
+            if label and label ~= "" then
+                CreateInstance("TextLabel", {
+                    Name = "SectionSubLabel",
+                    Font = f.Regular,
+                    TextColor3 = c.TextDark,
+                    TextTransparency = 0.35,
+                    Text = label,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BackgroundTransparency = 1,
+                    TextSize = textsize.Tiny,
+                    Size = UDim2.new(1, 0, 0, 14),
+                    Parent = column
+                })
+            end
 
             currentFrame = CreateInstance("Frame", {
                 Name = "SectionContent",
@@ -1621,8 +1625,8 @@ function Library._CreateDualSection(tab, leftName, rightName)
 
         NewSubSection(defaultName)
 
-        function methods:CreateSection(sectionName)
-            NewSubSection(sectionName)
+        function methods:CreateSection(sectionName, label)
+            NewSubSection(sectionName, label)
             return methods
         end
         function methods:CreateToggle(config)
@@ -1645,12 +1649,6 @@ function Library._CreateDualSection(tab, leftName, rightName)
         end
         function methods:CreateTextBox(config)
             return Library._CreateTextBox({content = currentFrame, _library = tab._library}, config)
-        end
-        function methods:CreateSpace(height)
-            return Library._CreateSpace({content = currentFrame}, height)
-        end
-        function methods:CreateLabel(text)
-            return Library._CreateLabel({content = currentFrame}, text)
         end
 
         return methods
@@ -1850,6 +1848,8 @@ function Library._CreateSlider(tab, config)
         )
     end
 
+    Library._AddSpacer(tab.content, config)
+
     return methods
 end
 
@@ -1909,6 +1909,8 @@ function Library._CreateButton(tab, config)
         task.wait(0.1)
         CreateTween(frame, {BackgroundTransparency = 0.4}, animationspeed.Fast)
     end)
+
+    Library._AddSpacer(tab.content, config)
 
     return {
         SetText = function(_, text)
@@ -2022,6 +2024,8 @@ function Library._CreateToggle(tab, config)
         )
     end
 
+    Library._AddSpacer(tab.content, config)
+
     return methods
 end
 
@@ -2034,7 +2038,6 @@ function Library._CreateDropdown(tab, config)
     local flag = config.Flag or config.Name
     local selected = multiSelect and {} or default
     local expanded = false
-    local CloseDropdown
 
     if multiSelect and type(default) == "table" then
         selected = default
@@ -2061,7 +2064,6 @@ function Library._CreateDropdown(tab, config)
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 10),
         TextSize = textsize.Normal,
@@ -2083,39 +2085,11 @@ function Library._CreateDropdown(tab, config)
     CreateCorner(selectedDisplay, 5)
     CreateStroke(selectedDisplay)
 
-    -- Keep the name readable instead of letting the value box cover it
-    -- (e.g. "Target Mode" getting hidden behind a wide box). When there's
-    -- not enough room for both at full size, shrink the box down to a
-    -- usable minimum and give the freed space to the name.
-    local MIN_BOX_WIDTH, MAX_BOX_WIDTH = 60, 135
-    local function LayoutDropdownHeader()
-        local totalWidth = frame.AbsoluteSize.X
-        if totalWidth <= 0 then return end
-
-        local nameTextWidth = tsvc:GetTextSize(name, textsize.Normal, f.Regular, Vector2.new(1000, 20)).X
-        local available = totalWidth - 20
-
-        local boxWidth = MAX_BOX_WIDTH
-        local nameWidth = math.min(nameTextWidth + 4, available - MAX_BOX_WIDTH - 10)
-
-        if nameWidth < 40 then
-            nameWidth = math.max(math.min(nameTextWidth + 4, available - MIN_BOX_WIDTH - 10), 40)
-            boxWidth = math.clamp(available - nameWidth - 10, MIN_BOX_WIDTH, MAX_BOX_WIDTH)
-        end
-
-        nameLabel.Size = UDim2.new(0, nameWidth, 0, 20)
-        selectedDisplay.Size = UDim2.new(0, boxWidth, 0, 26)
-        selectedDisplay.Position = UDim2.new(1, -boxWidth - 10, 0, 6)
-    end
-
-    frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(LayoutDropdownHeader)
-    task.defer(LayoutDropdownHeader)
-
     local selectedLabel = CreateInstance("TextLabel", {
         Name = "SelectedLabel",
         Font = f.Regular,
         TextColor3 = c.Text,
-        Text = (type(selected) == "table") and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
+        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = textsize.Small,
@@ -2142,24 +2116,17 @@ function Library._CreateDropdown(tab, config)
     local searchBoxHeight = 28
     local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
 
-    -- Popup ZIndex base. The options list is parented straight to the ScreenGui
-    -- (same trick the ColorPicker uses) instead of living inside `frame`, which
-    -- sits inside a scrolling list. That's what was making the Theme dropdown's
-    -- options render hidden/washed-out behind whatever came after it (like the
-    -- "Configuration" section) -- ZIndex alone can't win against later siblings
-    -- once you're nested a level deep inside a ClipsDescendants scroll list.
-    local dz = 3000
-
     local optionsContainer = CreateInstance("Frame", {
-        Name = "OptionsContainer_" .. name,
+        Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
+        Position = UDim2.new(1, -145, 0, 38),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, totalOptionsHeight + searchBoxHeight),
         Visible = false,
-        ZIndex = dz,
+        ZIndex = 100,
         ClipsDescendants = true,
-        Parent = frame:FindFirstAncestorOfClass("ScreenGui") or frame
+        Parent = frame
     })
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
@@ -2168,7 +2135,7 @@ function Library._CreateDropdown(tab, config)
         Name = "SearchBoxHolder",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, searchBoxHeight),
-        ZIndex = dz + 1,
+        ZIndex = 101,
         Parent = optionsContainer
     })
     CreateInstance("UIPadding", {
@@ -2193,7 +2160,7 @@ function Library._CreateDropdown(tab, config)
         TextSize = textsize.Small,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = dz + 1,
+        ZIndex = 101,
         Parent = searchBoxHolder
     })
     CreateCorner(searchBox, 4)
@@ -2212,48 +2179,17 @@ function Library._CreateDropdown(tab, config)
         CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
-        ZIndex = dz,
+        ZIndex = 100,
         Parent = optionsContainer
     })
     CreateListLayout(optionsScroll, 0, Enum.SortOrder.LayoutOrder)
 
-    local function PositionOptions()
-        local screenGui = frame:FindFirstAncestorOfClass("ScreenGui")
-        if not screenGui then return end
-        local btnPos = selectedDisplay.AbsolutePosition
-        local btnSize = selectedDisplay.AbsoluteSize
-        local viewport = workspace.CurrentCamera.ViewportSize
-        local popupWidth = optionsContainer.Size.X.Offset
-        local popupHeight = optionsContainer.Size.Y.Offset
-
-        local targetX = btnPos.X + btnSize.X - popupWidth
-        local targetY = btnPos.Y + btnSize.Y + 4
-
-        if targetX < 4 then
-            targetX = 4
-        elseif targetX + popupWidth > viewport.X - 4 then
-            targetX = viewport.X - popupWidth - 4
-        end
-
-        if targetY + popupHeight > viewport.Y - 4 then
-            targetY = btnPos.Y - popupHeight - 4
-        end
-
-        optionsContainer.Position = UDim2.new(0, targetX, 0, targetY)
-    end
-
-    local function GetDisplayText()
-        if type(selected) == "table" then
-            if #selected > 0 then
-                return table.concat(selected, ", ")
-            end
-            return "None"
-        end
-        return tostring(selected)
-    end
-
     local function UpdateSelectedText()
-        selectedLabel.Text = GetDisplayText()
+        if multiSelect then
+            selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
+        else
+            selectedLabel.Text = tostring(selected)
+        end
     end
 
     local function CreateOptionButton(option)
@@ -2270,7 +2206,7 @@ function Library._CreateDropdown(tab, config)
             TextSize = textsize.Small,
             TextXAlignment = Enum.TextXAlignment.Left,
             Size = UDim2.new(1, 0, 0, s.Dropdown.OptionHeight),
-            ZIndex = dz,
+            ZIndex = 100,
             Parent = optionsScroll
         })
 
@@ -2288,7 +2224,7 @@ function Library._CreateDropdown(tab, config)
             Size = UDim2.new(0, 6, 0, 6),
             BorderSizePixel = 0,
             BackgroundTransparency = isSelected and 0 or 1,
-            ZIndex = dz + 1,
+            ZIndex = 101,
             Parent = optionBtn
         })
         CreateCorner(checkDot, 100)
@@ -2332,7 +2268,10 @@ function Library._CreateDropdown(tab, config)
                 RefreshVisual()
                 UpdateSelectedText()
                 callback(selected)
-                CloseDropdown()
+                expanded = false
+                optionsContainer.Visible = false
+                CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+                frame.ZIndex = 1
             end
         end)
 
@@ -2371,34 +2310,16 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
-    CloseDropdown = function()
-        expanded = false
-        optionsContainer.Visible = false
-        CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
-        if Library.ActiveDropdown == CloseDropdown then
-            Library.ActiveDropdown = nil
-        end
-    end
-
     toggleBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         expanded = not expanded
+        optionsContainer.Visible = expanded
         if expanded then
-            if Library.ActiveDropdown and Library.ActiveDropdown ~= CloseDropdown then
-                Library.ActiveDropdown()
-            end
-            if Library.ActivePicker then
-                Library.ActivePicker()
-            end
-            Library.ActiveDropdown = CloseDropdown
             searchBox.Text = ""
             FilterOptions("")
-            PositionOptions()
-            optionsContainer.Visible = true
-            CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
-        else
-            CloseDropdown()
         end
+        CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
+        frame.ZIndex = expanded and 10 or 1
     end)
 
     local methods = {
@@ -2439,9 +2360,6 @@ function Library._CreateDropdown(tab, config)
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
             optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
-            if expanded then
-                PositionOptions()
-            end
         end
     }
 
@@ -2451,6 +2369,8 @@ function Library._CreateDropdown(tab, config)
             function(value) methods:SetValue(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -2574,6 +2494,8 @@ function Library._CreateKeybind(tab, config, lib)
             function(value) methods:SetKey(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -2816,9 +2738,6 @@ function Library._CreateColorPicker(tab, config)
         if Library.ActivePicker then
             Library.ActivePicker()
         end
-        if Library.ActiveDropdown then
-            Library.ActiveDropdown()
-        end
         Library.ActivePicker = ClosePicker
 
         local btnPos = colorPreview.AbsolutePosition
@@ -2864,6 +2783,8 @@ function Library._CreateColorPicker(tab, config)
             function(value) methods:SetColor(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -3000,6 +2921,8 @@ function Library._CreateTextBox(tab, config)
             function(value) methods:SetText(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
