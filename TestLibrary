@@ -5,6 +5,7 @@ local lg = game:GetService("Lighting")
 local rs = game:GetService("RunService")
 local gs = game:GetService("GuiService")
 local hs = game:GetService("HttpService")
+local tsvc = game:GetService("TextService")
 
 local n = "Skulx"
 
@@ -2060,6 +2061,7 @@ function Library._CreateDropdown(tab, config)
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 10),
         TextSize = textsize.Normal,
@@ -2081,11 +2083,39 @@ function Library._CreateDropdown(tab, config)
     CreateCorner(selectedDisplay, 5)
     CreateStroke(selectedDisplay)
 
+    -- Keep the name readable instead of letting the value box cover it
+    -- (e.g. "Target Mode" getting hidden behind a wide box). When there's
+    -- not enough room for both at full size, shrink the box down to a
+    -- usable minimum and give the freed space to the name.
+    local MIN_BOX_WIDTH, MAX_BOX_WIDTH = 60, 135
+    local function LayoutDropdownHeader()
+        local totalWidth = frame.AbsoluteSize.X
+        if totalWidth <= 0 then return end
+
+        local nameTextWidth = tsvc:GetTextSize(name, textsize.Normal, f.Regular, Vector2.new(1000, 20)).X
+        local available = totalWidth - 20
+
+        local boxWidth = MAX_BOX_WIDTH
+        local nameWidth = math.min(nameTextWidth + 4, available - MAX_BOX_WIDTH - 10)
+
+        if nameWidth < 40 then
+            nameWidth = math.max(math.min(nameTextWidth + 4, available - MIN_BOX_WIDTH - 10), 40)
+            boxWidth = math.clamp(available - nameWidth - 10, MIN_BOX_WIDTH, MAX_BOX_WIDTH)
+        end
+
+        nameLabel.Size = UDim2.new(0, nameWidth, 0, 20)
+        selectedDisplay.Size = UDim2.new(0, boxWidth, 0, 26)
+        selectedDisplay.Position = UDim2.new(1, -boxWidth - 10, 0, 6)
+    end
+
+    frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(LayoutDropdownHeader)
+    task.defer(LayoutDropdownHeader)
+
     local selectedLabel = CreateInstance("TextLabel", {
         Name = "SelectedLabel",
         Font = f.Regular,
         TextColor3 = c.Text,
-        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
+        Text = (type(selected) == "table") and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = textsize.Small,
@@ -2212,12 +2242,18 @@ function Library._CreateDropdown(tab, config)
         optionsContainer.Position = UDim2.new(0, targetX, 0, targetY)
     end
 
-    local function UpdateSelectedText()
-        if multiSelect then
-            selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
-        else
-            selectedLabel.Text = tostring(selected)
+    local function GetDisplayText()
+        if type(selected) == "table" then
+            if #selected > 0 then
+                return table.concat(selected, ", ")
+            end
+            return "None"
         end
+        return tostring(selected)
+    end
+
+    local function UpdateSelectedText()
+        selectedLabel.Text = GetDisplayText()
     end
 
     local function CreateOptionButton(option)
