@@ -2035,6 +2035,13 @@ function Library._CreateDropdown(tab, config)
     local expanded = false
     local CloseDropdown
 
+    local function ToDisplayText(value)
+        if typeof(value) == "string" and value ~= "" then
+            return value
+        end
+        return "None"
+    end
+
     if multiSelect and type(default) == "table" then
         selected = default
     elseif multiSelect then
@@ -2060,10 +2067,11 @@ function Library._CreateDropdown(tab, config)
         TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(1, -155, 0, 20),
         ZIndex = 1,
         Parent = frame
     })
@@ -2085,7 +2093,7 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedLabel",
         Font = f.Regular,
         TextColor3 = c.Text,
-        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
+        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or ToDisplayText(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = textsize.Small,
@@ -2216,7 +2224,7 @@ function Library._CreateDropdown(tab, config)
         if multiSelect then
             selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
         else
-            selectedLabel.Text = tostring(selected)
+            selectedLabel.Text = ToDisplayText(selected)
         end
     end
 
