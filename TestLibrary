@@ -2024,23 +2024,6 @@ function Library._CreateToggle(tab, config)
     return methods
 end
 
-local function DropdownDisplayText(value)
-    if value == nil then
-        return "None"
-    elseif type(value) == "string" then
-        return value
-    elseif type(value) == "table" then
-        if value.Name then
-            return tostring(value.Name)
-        end
-        return "None"
-    elseif typeof and typeof(value) == "Instance" then
-        return value.Name
-    else
-        return tostring(value)
-    end
-end
-
 function Library._CreateDropdown(tab, config)
     local name = config.Name or "Dropdown"
     local options = config.Options or {"Option 1", "Option 2", "Option 3"}
@@ -2076,12 +2059,11 @@ function Library._CreateDropdown(tab, config)
         Font = f.Regular,
         TextColor3 = c.Text,
         Text = name,
-        TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0.45, -15, 0, 20),
+        Size = UDim2.new(0, 200, 0, 20),
         ZIndex = 1,
         Parent = frame
     })
@@ -2090,9 +2072,9 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedDisplay",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(0.45, 0, 0, 6),
+        Position = UDim2.new(1, -145, 0, 6),
         BorderSizePixel = 0,
-        Size = UDim2.new(0.55, -10, 0, 26),
+        Size = UDim2.new(0, 135, 0, 26),
         ZIndex = 2,
         Parent = frame
     })
@@ -2103,17 +2085,7 @@ function Library._CreateDropdown(tab, config)
         Name = "SelectedLabel",
         Font = f.Regular,
         TextColor3 = c.Text,
-        Text = (function()
-            if multiSelect then
-                if #selected == 0 then return "None" end
-                local names = {}
-                for i, v in ipairs(selected) do
-                    names[i] = DropdownDisplayText(v)
-                end
-                return table.concat(names, ", ")
-            end
-            return DropdownDisplayText(selected)
-        end)(),
+        Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = textsize.Small,
@@ -2242,17 +2214,9 @@ function Library._CreateDropdown(tab, config)
 
     local function UpdateSelectedText()
         if multiSelect then
-            if #selected == 0 then
-                selectedLabel.Text = "None"
-            else
-                local names = {}
-                for i, v in ipairs(selected) do
-                    names[i] = DropdownDisplayText(v)
-                end
-                selectedLabel.Text = table.concat(names, ", ")
-            end
+            selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
         else
-            selectedLabel.Text = DropdownDisplayText(selected)
+            selectedLabel.Text = tostring(selected)
         end
     end
 
@@ -2370,12 +2334,6 @@ function Library._CreateDropdown(tab, config)
         ZIndex = 3,
         Parent = selectedDisplay
     })
-
-    selectedDisplay:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-        if expanded then
-            PositionOptions()
-        end
-    end)
 
     CloseDropdown = function()
         expanded = false
