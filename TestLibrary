@@ -2371,6 +2371,12 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
+    selectedDisplay:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        if expanded then
+            PositionOptions()
+        end
+    end)
+
     CloseDropdown = function()
         expanded = false
         optionsContainer.Visible = false
