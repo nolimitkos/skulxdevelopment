@@ -1454,8 +1454,12 @@ function Library._CreateTab(section, name, icon)
 
     local tabMethods = setmetatable({}, {__index = tab})
 
-    function tabMethods:CreateSection(sectionName, label)
-        return Library._CreateContentSection(self, sectionName, label)
+    function tabMethods:CreateSection(sectionName)
+        return Library._CreateContentSection(self, sectionName)
+    end
+
+    function tabMethods:CreateLabel(config)
+        return Library._CreateLabel(self, config)
     end
 
     function tabMethods:CreateParagraph(config)
@@ -1522,7 +1526,7 @@ function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient
     textLabel.TextColor3 = c.Text
 end
 
-function Library._CreateContentSection(tab, name, label)
+function Library._CreateContentSection(tab, name)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
         Font = f.Regular,
@@ -1534,21 +1538,6 @@ function Library._CreateContentSection(tab, name, label)
         Size = UDim2.new(1, 0, 0, 25),
         Parent = tab.content
     })
-
-    if label and label ~= "" then
-        CreateInstance("TextLabel", {
-            Name = "SectionLabel",
-            Font = f.Regular,
-            TextColor3 = c.TextDark,
-            TextTransparency = 0.35,
-            Text = label,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BackgroundTransparency = 1,
-            TextSize = textsize.Tiny,
-            Size = UDim2.new(1, 0, 0, 14),
-            Parent = tab.content
-        })
-    end
 
     return section
 end
@@ -1585,7 +1574,7 @@ function Library._CreateDualSection(tab, leftName, rightName)
         local methods = {}
         local currentFrame
 
-        local function NewSubSection(sectionName, label)
+        local function NewSubSection(sectionName)
             CreateInstance("TextLabel", {
                 Name = "SectionLabel",
                 Font = f.Regular,
@@ -1597,21 +1586,6 @@ function Library._CreateDualSection(tab, leftName, rightName)
                 Size = UDim2.new(1, 0, 0, 20),
                 Parent = column
             })
-
-            if label and label ~= "" then
-                CreateInstance("TextLabel", {
-                    Name = "SectionSubLabel",
-                    Font = f.Regular,
-                    TextColor3 = c.TextDark,
-                    TextTransparency = 0.35,
-                    Text = label,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    BackgroundTransparency = 1,
-                    TextSize = textsize.Tiny,
-                    Size = UDim2.new(1, 0, 0, 14),
-                    Parent = column
-                })
-            end
 
             currentFrame = CreateInstance("Frame", {
                 Name = "SectionContent",
@@ -1625,9 +1599,12 @@ function Library._CreateDualSection(tab, leftName, rightName)
 
         NewSubSection(defaultName)
 
-        function methods:CreateSection(sectionName, label)
-            NewSubSection(sectionName, label)
+        function methods:CreateSection(sectionName)
+            NewSubSection(sectionName)
             return methods
+        end
+        function methods:CreateLabel(config)
+            return Library._CreateLabel({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateToggle(config)
             return Library._CreateToggle({content = currentFrame, _library = tab._library}, config)
@@ -1658,6 +1635,34 @@ function Library._CreateDualSection(tab, leftName, rightName)
     local rightMethods = CreateColumn(rightCol, rightName or "Right")
 
     return leftMethods, rightMethods
+end
+
+function Library._CreateLabel(tab, config)
+    config = config or {}
+    if type(config) == "string" then
+        config = {Text = config}
+    end
+    local text = config.Text or config.Name or "Label"
+
+    local labelInstance = CreateInstance("TextLabel", {
+        Name = "Label_" .. text,
+        Font = f.Regular,
+        TextColor3 = c.Text,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Small,
+        Size = UDim2.new(1, 0, 0, 18),
+        Parent = tab.content
+    })
+
+    Library._AddSpacer(tab.content, config)
+
+    return {
+        SetText = function(_, newText)
+            labelInstance.Text = newText
+        end
+    }
 end
 
 function Library._CreateParagraph(tab, config)
