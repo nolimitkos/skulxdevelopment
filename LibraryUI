@@ -266,6 +266,17 @@ local function IsMobileDevice()
     return IsMobile
 end
 
+function Library._AddSpacer(parent, config)
+    if config.Space and config.Space > 0 then
+        CreateInstance("Frame", {
+            Name = "Spacer",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, config.Space),
+            Parent = parent
+        })
+    end
+end
+
 local function MakeDraggable(frame, handle)
     local dragging = false
     local dragInput, dragStart, startPos
@@ -297,15 +308,21 @@ local function MakeDraggable(frame, handle)
     handle.InputBegan:Connect(OnInputBegan)
     handle.InputChanged:Connect(OnInputChanged)
 
+    -- OPTIMIZED: Throttled drag updates
+    local LastDragUpdate = 0
     ui.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+            local now = tick()
+            if now - LastDragUpdate >= 0.016 then -- ~60fps for smooth dragging
+                LastDragUpdate = now
+                local delta = input.Position - dragStart
+                frame.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
         end
     end)
 end
@@ -319,13 +336,23 @@ local function DisconnectAll()
     Connections = {}
 end
 
+local function GetGameConfigFolder()
+    return "SkulxConfigs/" .. tostring(game.PlaceId)
+end
+
 local function GetConfigFolder(configName)
-    return "SkulxConfigs/" .. configName
+    return GetGameConfigFolder() .. "/" .. configName
 end
 
 local function EnsureConfigFolder()
-    if isfolder and not isfolder("SkulxConfigs") then
-        makefolder("SkulxConfigs")
+    if isfolder then
+        if not isfolder("SkulxConfigs") then
+            makefolder("SkulxConfigs")
+        end
+        local gameFolder = GetGameConfigFolder()
+        if not isfolder(gameFolder) then
+            makefolder(gameFolder)
+        end
     end
 end
 
@@ -333,10 +360,10 @@ local function GetAvailableConfigs()
     local configs = {}
     if isfolder and listfiles then
         EnsureConfigFolder()
-        local files = listfiles("SkulxConfigs")
+        local files = listfiles(GetGameConfigFolder())
         for _, file in ipairs(files) do
-            local name = file:match("SkulxConfigs/(.+)%.json$") or file:match("AcrylicConfigs\\(.+)%.json$")
-            if name then
+            local name = file:match("([^/\\]+)%.json$")
+            if name and name ~= "_autoload" then
                 table.insert(configs, name)
             end
         end
@@ -348,14 +375,14 @@ local function SaveAutoLoadSettings(data)
     if not writefile then return end
     EnsureConfigFolder()
     pcall(function()
-        writefile("SkulxConfigs/_autoload.json", hs:JSONEncode(data))
+        writefile(GetGameConfigFolder() .. "/_autoload.json", hs:JSONEncode(data))
     end)
 end
 
 local function GetAutoLoadSettings()
     if not readfile or not isfile then return {enabled = false, config = "default"} end
     EnsureConfigFolder()
-    local path = "SkulxConfigs/_autoload.json"
+    local path = GetGameConfigFolder() .. "/_autoload.json"
     if not isfile(path) then return {enabled = false, config = "default"} end
     local success, data = pcall(function()
         return hs:JSONDecode(readfile(path))
@@ -469,8 +496,12 @@ function SkulxBlur:_Render(distance)
         positions.bottom_right = position + size
     end
 
+    local LastBlurCalc = 0
     local function Update()
         if not self._root or not self._enabled then return end
+        local now = tick()
+        if now - LastBlurCalc < 0.033 then return end -- ~30fps cap
+        LastBlurCalc = now
         local tl = ViewportToWorld(positions.top_left, distance)
         local tr = ViewportToWorld(positions.top_right, distance)
         local br = ViewportToWorld(positions.bottom_right, distance)
@@ -499,7 +530,15 @@ function SkulxBlur:_Render(distance)
     Connections["blur_fov"] = workspace.CurrentCamera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
     Connections["blur_pos"] = self._frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(OnChange)
     Connections["blur_size"] = self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnChange)
-    Connections["blur_render"] = rs.RenderStepped:Connect(Update)
+    -- OPTIMIZED: Throttled blur render to reduce lag
+    local LastBlurUpdate = 0
+    Connections["blur_render"] = rs.RenderStepped:Connect(function()
+        local now = tick()
+        if now - LastBlurUpdate >= 0.05 then
+            LastBlurUpdate = now
+            Update()
+        end
+    end)
     task.spawn(OnChange)
 end
 
@@ -729,15 +768,21 @@ function Library:_SetupMobileSupport()
             dragging = false
         end
     end)
+    -- OPTIMIZED: Throttled mobile toggle drag
+    local LastMobileDrag = 0
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-            local delta = input.Position - dragStart
-            mobileButton.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+            local now = tick()
+            if now - LastMobileDrag >= 0.016 then
+                LastMobileDrag = now
+                local delta = input.Position - dragStart
+                mobileButton.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
         end
     end)
     self._mobileToggle = mobileButton
@@ -749,7 +794,7 @@ end
 function Library:_CreateMainv0rtexd()
     self.screenGui = CreateInstance("ScreenGui", {
         Name = "Skulx",
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
         ResetOnSpawn = false
     })
 
@@ -825,8 +870,10 @@ function Library:_CreateMainv0rtexd()
         Parent = self.container
     })
 
+    -- OPTIMIZED: Throttled FPS/Ping updates to reduce lag
     local fpsCount = 0
     local fpsTime = tick()
+    local LastPingUpdate = 0
     Connections["fps_ping"] = rs.RenderStepped:Connect(function()
         fpsCount = fpsCount + 1
         local now = tick()
@@ -835,11 +882,15 @@ function Library:_CreateMainv0rtexd()
             fpsCount = 0
             fpsTime = now
         end
-        local ping = 0
-        pcall(function()
-            ping = player:GetNetworkPing() * 1000
-        end)
-        self.pingLabel.Text = math.floor(ping) .. " ms"
+        -- Only update ping every 0.5s instead of every frame
+        if now - LastPingUpdate >= 0.5 then
+            LastPingUpdate = now
+            local ping = 0
+            pcall(function()
+                ping = player:GetNetworkPing() * 1000
+            end)
+            self.pingLabel.Text = math.floor(ping) .. " ms"
+        end
     end)
 
     self:_Createv0rtexdControls()
@@ -955,8 +1006,14 @@ function Library:_CreateReopenButton()
         Parent = stroke
     })
 
+    -- OPTIMIZED: Throttled gradient rotation to reduce lag
+    local LastGradientUpdate = 0
     Connections["reopen_gradient"] = rs.RenderStepped:Connect(function(dt)
-        gradient.Rotation = (gradient.Rotation + dt * 60) % 360
+        local now = tick()
+        if now - LastGradientUpdate >= 0.033 then -- ~30fps instead of 60fps
+            LastGradientUpdate = now
+            gradient.Rotation = (gradient.Rotation + dt * 60) % 360
+        end
     end)
 
     reopenBtn.MouseButton1Click:Connect(function()
@@ -1088,13 +1145,19 @@ function Library:_SetupSmartResize(handle)
         end
     end)
 
+    -- OPTIMIZED: Throttled resize updates
+    local LastResizeUpdate = 0
     ui.InputChanged:Connect(function(input)
         if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - resizeStart
-            local newWidth = math.clamp(startSize.X + delta.X, self._minSize.X, self._maxSize.X)
-            local newHeight = math.clamp(startSize.Y + delta.Y, self._minSize.Y, self._maxSize.Y)
-            self.container.Size = UDim2.new(0, newWidth, 0, newHeight)
-            self._originalHeight = newHeight
+            local now = tick()
+            if now - LastResizeUpdate >= 0.016 then
+                LastResizeUpdate = now
+                local delta = input.Position - resizeStart
+                local newWidth = math.clamp(startSize.X + delta.X, self._minSize.X, self._maxSize.X)
+                local newHeight = math.clamp(startSize.Y + delta.Y, self._minSize.Y, self._maxSize.Y)
+                self.container.Size = UDim2.new(0, newWidth, 0, newHeight)
+                self._originalHeight = newHeight
+            end
         end
     end)
 end
@@ -1167,7 +1230,7 @@ function Library:SaveConfig(configName)
         configData[id] = value
     end
     local success, err = pcall(function()
-        writefile("SkulxConfigs/" .. configName .. ".json", hs:JSONEncode(configData))
+        writefile(GetConfigFolder(configName) .. ".json", hs:JSONEncode(configData))
     end)
     if success then
         self._currentConfig = configName
@@ -1200,7 +1263,7 @@ function Library:LoadConfig(configName)
         })
         return false
     end
-    local path = "SkulxConfigs/" .. configName .. ".json"
+    local path = GetConfigFolder(configName) .. ".json"
     if not isfile(path) then
         self:Notify({
             Title = "Error",
@@ -1246,7 +1309,7 @@ function Library:DeleteConfig(configName)
     if not delfile or not isfile then
         return false
     end
-    local path = "SkulxConfigs/" .. configName .. ".json"
+    local path = GetConfigFolder(configName) .. ".json"
     if isfile(path) then
         delfile(path)
         self:Notify({
@@ -1321,7 +1384,17 @@ function Library:CreateSection(name)
     local sectionMethods = setmetatable({}, {__index = section})
 
     function sectionMethods:CreateTab(tabName, icon)
-        return Library._CreateTab(self, tabName, icon)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateTab(self, tabName, icon)
     end
 
     return sectionMethods
@@ -1434,47 +1507,171 @@ function Library._CreateTab(section, name, icon)
     local tabMethods = setmetatable({}, {__index = tab})
 
     function tabMethods:CreateSection(sectionName)
-        return Library._CreateContentSection(self, sectionName)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateContentSection(self, sectionName)
+    end
+
+    function tabMethods:CreateLabel(config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateLabel(self, config)
     end
 
     function tabMethods:CreateParagraph(config)
-        return Library._CreateParagraph(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateParagraph(self, config)
     end
 
     function tabMethods:CreateSlider(config)
-        return Library._CreateSlider(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateSlider(self, config)
     end
 
     function tabMethods:CreateButton(config)
-        return Library._CreateButton(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateButton(self, config)
     end
 
     function tabMethods:CreateToggle(config)
-        return Library._CreateToggle(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateToggle(self, config)
     end
 
     function tabMethods:CreateDropdown(config)
-        return Library._CreateDropdown(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateDropdown(self, config)
     end
 
     function tabMethods:CreateKeybind(config)
-        return Library._CreateKeybind(self, config, section._library)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateKeybind(self, config, section._library)
     end
 
     function tabMethods:CreateColorPicker(config)
-        return Library._CreateColorPicker(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateColorPicker(self, config)
     end
 
     function tabMethods:CreateTextBox(config)
-        return Library._CreateTextBox(self, config)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateTextBox(self, config)
     end
 
     function tabMethods:CreateConfigSection()
-        return Library._CreateConfigSection(self)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateConfigSection(self)
     end
 
     function tabMethods:CreateDualSection(leftName, rightName)
-        return Library._CreateDualSection(self, leftName, rightName)
+        -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateDualSection(self, leftName, rightName)
     end
 
     return tabMethods
@@ -1513,6 +1710,7 @@ function Library._CreateContentSection(tab, name)
         Size = UDim2.new(1, 0, 0, 25),
         Parent = tab.content
     })
+
     return section
 end
 
@@ -1577,26 +1775,109 @@ function Library._CreateDualSection(tab, leftName, rightName)
             NewSubSection(sectionName)
             return methods
         end
+        function methods:CreateLabel(config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateLabel({content = currentFrame, _library = tab._library}, config)
+        end
         function methods:CreateToggle(config)
-            return Library._CreateToggle({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateToggle({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateSlider(config)
-            return Library._CreateSlider({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateSlider({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateButton(config)
-            return Library._CreateButton({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateButton({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateDropdown(config)
-            return Library._CreateDropdown({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateDropdown({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateKeybind(config)
-            return Library._CreateKeybind({content = currentFrame, _library = tab._library}, config, tab._library)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateKeybind({content = currentFrame, _library = tab._library}, config, tab._library)
         end
         function methods:CreateColorPicker(config)
-            return Library._CreateColorPicker({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateColorPicker({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateTextBox(config)
-            return Library._CreateTextBox({content = currentFrame, _library = tab._library}, config)
+            -- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
+return Library._CreateTextBox({content = currentFrame, _library = tab._library}, config)
         end
 
         return methods
@@ -1606,6 +1887,34 @@ function Library._CreateDualSection(tab, leftName, rightName)
     local rightMethods = CreateColumn(rightCol, rightName or "Right")
 
     return leftMethods, rightMethods
+end
+
+function Library._CreateLabel(tab, config)
+    config = config or {}
+    if type(config) == "string" then
+        config = {Text = config}
+    end
+    local text = config.Text or config.Name or "Label"
+
+    local labelInstance = CreateInstance("TextLabel", {
+        Name = "Label_" .. text,
+        Font = f.Regular,
+        TextColor3 = c.Text,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Small,
+        Size = UDim2.new(1, 0, 0, 18),
+        Parent = tab.content
+    })
+
+    Library._AddSpacer(tab.content, config)
+
+    return {
+        SetText = function(_, newText)
+            labelInstance.Text = newText
+        end
+    }
 end
 
 function Library._CreateParagraph(tab, config)
@@ -1770,9 +2079,15 @@ function Library._CreateSlider(tab, config)
         end
     end)
 
+    -- OPTIMIZED: Throttled slider updates
+    local LastSliderUpdate = 0
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateSlider(input)
+            local now = tick()
+            if now - LastSliderUpdate >= 0.016 then
+                LastSliderUpdate = now
+                UpdateSlider(input)
+            end
         end
     end)
 
@@ -1795,6 +2110,8 @@ function Library._CreateSlider(tab, config)
             function(value) methods:SetValue(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -1855,6 +2172,8 @@ function Library._CreateButton(tab, config)
         task.wait(0.1)
         CreateTween(frame, {BackgroundTransparency = 0.4}, animationspeed.Fast)
     end)
+
+    Library._AddSpacer(tab.content, config)
 
     return {
         SetText = function(_, text)
@@ -1967,6 +2286,8 @@ function Library._CreateToggle(tab, config)
             function(value) methods:SetValue(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -2312,6 +2633,8 @@ function Library._CreateDropdown(tab, config)
         )
     end
 
+    Library._AddSpacer(tab.content, config)
+
     return methods
 end
 
@@ -2434,6 +2757,8 @@ function Library._CreateKeybind(tab, config, lib)
             function(value) methods:SetKey(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -2651,9 +2976,15 @@ function Library._CreateColorPicker(tab, config)
         end
     end)
 
+    -- OPTIMIZED: Throttled color picker updates
+    local LastColorUpdate = 0
     ui.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement then
-            ProcessInput(input)
+            local now = tick()
+            if now - LastColorUpdate >= 0.016 then
+                LastColorUpdate = now
+                ProcessInput(input)
+            end
         end
     end)
 
@@ -2721,6 +3052,8 @@ function Library._CreateColorPicker(tab, config)
             function(value) methods:SetColor(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -2857,6 +3190,8 @@ function Library._CreateTextBox(tab, config)
             function(value) methods:SetText(value) end
         )
     end
+
+    Library._AddSpacer(tab.content, config)
 
     return methods
 end
@@ -3028,35 +3363,86 @@ function Library._CreateConfigSection(tab)
                         obj.Text = obj.Text:gsub(" " .. BADGE, "")
                     end
                 end
+                -- OPTIMIZED: Throttled badge system to prevent lag
+                local BadgeUpdateQueue = {}
+                local BadgeProcessing = false
+
+                local function ProcessBadgeQueue()
+                    if BadgeProcessing then return end
+                    BadgeProcessing = true
+                    while #BadgeUpdateQueue > 0 do
+                        local obj = table.remove(BadgeUpdateQueue, 1)
+                        if obj and obj.Parent then
+                            pcall(SpoofAndBadge, obj)
+                        end
+                        task.wait(0.01) -- Small delay between processing
+                    end
+                    BadgeProcessing = false
+                end
+
                 local function MonitorObject(obj)
                     if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                        task.defer(SpoofAndBadge, obj)
+                        table.insert(BadgeUpdateQueue, obj)
+                        task.spawn(ProcessBadgeQueue)
+                        -- Throttled property changed signal
+                        local LastBadgeUpdate = 0
                         local conn = obj:GetPropertyChangedSignal("Text"):Connect(function()
-                            if BadgeActive then
-                                SpoofAndBadge(obj)
-                            else
+                            if not BadgeActive then
                                 RemoveBadge(obj)
+                                return
+                            end
+                            local now = tick()
+                            if now - LastBadgeUpdate >= 0.2 then
+                                LastBadgeUpdate = now
+                                SpoofAndBadge(obj)
                             end
                         end)
                         table.insert(BadgeConnections, conn)
                     end
                 end
+
+                -- Process existing UI elements in batches
+                local allDescendants = {}
                 for _, v in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                    MonitorObject(v)
+                    table.insert(allDescendants, v)
                 end
+                pcall(function()
+                    local CoreGui = game:GetService("CoreGui")
+                    for _, v in ipairs(CoreGui:GetDescendants()) do
+                        table.insert(allDescendants, v)
+                    end
+                end)
+
+                -- Process in batches to prevent frame drops
+                task.spawn(function()
+                    for i = 1, #allDescendants do
+                        MonitorObject(allDescendants[i])
+                        if i % 10 == 0 then
+                            task.wait(0.05) -- Yield every 10 items
+                        end
+                    end
+                end)
+
+                -- Throttled DescendantAdded for PlayerGui
+                local LastPGUpdate = 0
                 local conn1 = LocalPlayer.PlayerGui.DescendantAdded:Connect(function(obj)
-                    if BadgeActive then
+                    if not BadgeActive then return end
+                    local now = tick()
+                    if now - LastPGUpdate >= 0.1 then
+                        LastPGUpdate = now
                         MonitorObject(obj)
                     end
                 end)
                 table.insert(BadgeConnections, conn1)
+
                 pcall(function()
                     local CoreGui = game:GetService("CoreGui")
-                    for _, v in ipairs(CoreGui:GetDescendants()) do
-                        MonitorObject(v)
-                    end
+                    local LastCGUpdate = 0
                     local conn2 = CoreGui.DescendantAdded:Connect(function(obj)
-                        if BadgeActive then
+                        if not BadgeActive then return end
+                        local now = tick()
+                        if now - LastCGUpdate >= 0.1 then
+                            LastCGUpdate = now
                             MonitorObject(obj)
                         end
                     end)
@@ -3348,14 +3734,20 @@ function Library:CreateInfoTab(config)
         Parent = infoCol
     })
 
+    -- OPTIMIZED: Throttled info updates to reduce lag
+    local LastInfoUpdate = 0
     Connections["info_players"] = rs.Heartbeat:Connect(function()
-        local count = #plr:GetPlayers()
-        playersLabel.Text = "Players: " .. count
-        local t = math.floor(tick())
-        local h2 = math.floor(t / 3600) % 24
-        local m2 = math.floor(t / 60) % 60
-        local s2 = t % 60
-        seasonLabel.Text = string.format("Season Time: %02d:%02d:%02d", h2, m2, s2)
+        local now = tick()
+        if now - LastInfoUpdate >= 1 then
+            LastInfoUpdate = now
+            local count = #plr:GetPlayers()
+            playersLabel.Text = "Players: " .. count
+            local t = math.floor(tick())
+            local h2 = math.floor(t / 3600) % 24
+            local m2 = math.floor(t / 60) % 60
+            local s2 = t % 60
+            seasonLabel.Text = string.format("Season Time: %02d:%02d:%02d", h2, m2, s2)
+        end
     end)
 
     if #updates > 0 then
@@ -3398,4 +3790,14 @@ function Library:CreateInfoTab(config)
     }
 end
 
+-- ============================================
+-- Skulx Library [Optimized v1.1]
+-- Lag Fixes Applied:
+-- 1. Throttled SkulxBlur RenderStepped (0.05s)
+-- 2. Throttled FPS/Ping updates (ping every 0.5s)
+-- 3. Throttled reopen gradient rotation (0.033s)
+-- 4. Batched Verified Badge processing with throttling
+-- 5. Throttled info players Heartbeat (1s)
+-- 6. Throttled blur 3D calculations (0.033s)
+-- ============================================
 return Library
