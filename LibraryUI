@@ -870,17 +870,44 @@ function Library:_CreateMainv0rtexd()
         Parent = self.container
     })
 
-    -- OPTIMIZED: Throttled FPS/Ping updates to reduce lag
+    -- OPTIMIZED: Throttled FPS/Ping updates to reduce lag + COLORED STATUS
     local fpsCount = 0
     local fpsTime = tick()
     local LastPingUpdate = 0
+
+    local function GetFPSColor(fps)
+        if fps >= 55 then
+            return Color3.fromRGB(0, 255, 128)      -- Green (Excellent)
+        elseif fps >= 40 then
+            return Color3.fromRGB(255, 220, 0)      -- Yellow (Good)
+        elseif fps >= 25 then
+            return Color3.fromRGB(255, 140, 0)      -- Orange (Okay)
+        else
+            return Color3.fromRGB(255, 60, 60)      -- Red (Bad)
+        end
+    end
+
+    local function GetPingColor(ping)
+        if ping <= 50 then
+            return Color3.fromRGB(0, 255, 128)      -- Green (Excellent)
+        elseif ping <= 100 then
+            return Color3.fromRGB(255, 220, 0)      -- Yellow (Good)
+        elseif ping <= 200 then
+            return Color3.fromRGB(255, 140, 0)      -- Orange (Okay)
+        else
+            return Color3.fromRGB(255, 60, 60)      -- Red (Bad)
+        end
+    end
+
     Connections["fps_ping"] = rs.RenderStepped:Connect(function()
         fpsCount = fpsCount + 1
         local now = tick()
         if now - fpsTime >= 1 then
-            self.fpsLabel.Text = fpsCount .. " FPS"
+            local currentFPS = fpsCount
             fpsCount = 0
             fpsTime = now
+            self.fpsLabel.Text = currentFPS .. " FPS"
+            self.fpsLabel.TextColor3 = GetFPSColor(currentFPS)
         end
         -- Only update ping every 0.5s instead of every frame
         if now - LastPingUpdate >= 0.5 then
@@ -889,7 +916,9 @@ function Library:_CreateMainv0rtexd()
             pcall(function()
                 ping = player:GetNetworkPing() * 1000
             end)
-            self.pingLabel.Text = math.floor(ping) .. " ms"
+            local pingValue = math.floor(ping)
+            self.pingLabel.Text = pingValue .. " ms"
+            self.pingLabel.TextColor3 = GetPingColor(pingValue)
         end
     end)
 
@@ -3289,12 +3318,6 @@ function Library._CreateConfigSection(tab)
     local BadgeConnections = {}
     local BadgeNametagConnections = {}
 
-    local spacerVB = Instance.new("Frame")
-    spacerVB.Name = "Spacer"
-    spacerVB.BackgroundTransparency = 1
-    spacerVB.Size = UDim2.new(1, 0, 0, 10)
-    spacerVB.Parent = LeftBox.content
-
     LeftBox:CreateToggle({
         Name = "Verified Badge",
         Default = false,
@@ -3527,6 +3550,13 @@ function Library._CreateConfigSection(tab)
             end
         end
     })
+
+    -- Spacer label after Verified Badge
+    local spacerVB = Instance.new("Frame")
+    spacerVB.Name = "Spacer"
+    spacerVB.BackgroundTransparency = 1
+    spacerVB.Size = UDim2.new(1, 0, 0, 10)
+    spacerVB.Parent = LeftBox.content
 
     LeftBox:CreateToggle({
         Name = "Headless",
