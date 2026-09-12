@@ -133,17 +133,17 @@ end
 local IsMobile = ui.TouchEnabled and not ui.KeyboardEnabled
 
 local s = {
-    v0rtexd = IsMobile and {Width = 560, Height = 400} or {Width = 720, Height = 480},
-    Minv0rtexd = IsMobile and {Width = 520, Height = 380} or {Width = 620, Height = 420},
-    Maxv0rtexd = {Width = 1200, Height = 800},
+    v0rtexd = IsMobile and {Width = 620, Height = 430} or {Width = 780, Height = 520},
+    Minv0rtexd = IsMobile and {Width = 560, Height = 400} or {Width = 660, Height = 450},
+    Maxv0rtexd = {Width = 1000, Height = 800},
     Toggle = {Width = 38, Height = 21, Circle = 13},
-    Button = {Height = 36},
-    Slider = {Height = 44},
-    Dropdown = {Height = 36, OptionHeight = 28},
-    Tab = {Width = 125, Height = 38},
+    Button = {Height = 39},
+    Slider = {Height = 46},
+    Dropdown = {Height = 39, OptionHeight = 30},
+    Tab = {Width = 135, Height = 42},
     ColorPicker = {Width = 180, Height = 160},
     Notification = {Width = 220, Height = 70},
-    TextBox = {Height = 36, InputWidth = 90}
+    TextBox = {Height = 39, InputWidth = 90}
 }
 
 local f = {
@@ -601,6 +601,7 @@ function Library.new(title, configFolder)
     self._originalHeight = s.v0rtexd.Height
     self._minSize = Vector2.new(s.Minv0rtexd.Width, s.Minv0rtexd.Height)
     self._maxSize = Vector2.new(s.Maxv0rtexd.Width, s.Maxv0rtexd.Height)
+    self._autoWidthEnabled = true
     self._mobileToggle = nil
     self._configElements = {}
     self._autoSave = false
@@ -934,6 +935,7 @@ function Library:_CreateMainv0rtexd()
     })
 
     self:_CreateContentArea()
+    self:_SetupAutoWidth()
     MakeDraggable(self.container, self.topBar)
     self:_CreateReopenButton()
 
@@ -1135,8 +1137,50 @@ function Library:_CreateContentArea()
         ScrollingDirection = Enum.ScrollingDirection.Y,
         Parent = self.mainContent
     })
-    CreateListLayout(self.contentContainer, 12, Enum.SortOrder.LayoutOrder)
-    CreatePadding(self.contentContainer, 14, 14, 18, 18)
+    CreateListLayout(self.contentContainer, 8, Enum.SortOrder.LayoutOrder)
+    CreatePadding(self.contentContainer, 10, 10, 15, 15)
+end
+
+function Library:_SetupAutoWidth()
+    if self._autoWidthConnection then
+        self._autoWidthConnection:Disconnect()
+    end
+
+    local baseWidth = s.v0rtexd.Width
+    local paddingAndSidebar = 210
+    local minWidth = self._minSize.X
+    local maxWidth = self._maxSize.X
+
+    self._autoWidthConnection = rs.RenderStepped:Connect(function()
+        if not self._autoWidthEnabled or not self.container or not self.container.Parent then
+            return
+        end
+
+        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize
+        local viewportMax = viewport and math.max(minWidth, viewport.X - 20) or maxWidth
+        local allowedMax = math.min(maxWidth, viewportMax)
+        local requiredWidth = baseWidth
+
+        for _, child in ipairs(self.contentContainer:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                if child.Text and child.Text ~= "" and not child.TextScaled and not child.TextWrapped then
+                    local textWidth = child.TextBounds.X
+                    if textWidth > 0 then
+                        -- Extra room accounts for the sidebar, content padding,
+                        -- controls on the right, and comfortable breathing space.
+                        requiredWidth = math.max(requiredWidth, textWidth + paddingAndSidebar)
+                    end
+                end
+            end
+        end
+
+        local targetWidth = math.clamp(requiredWidth, minWidth, allowedMax)
+        local currentWidth = self.container.AbsoluteSize.X
+
+        if math.abs(targetWidth - currentWidth) >= 2 then
+            self.container.Size = UDim2.new(0, targetWidth, 0, self.container.AbsoluteSize.Y)
+        end
+    end)
 end
 
 function Library:_SetupSmartResize(handle)
@@ -1156,6 +1200,7 @@ function Library:_SetupSmartResize(handle)
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             resizing = true
+            self._autoWidthEnabled = false
             resizeStart = input.Position
             startSize = self.container.AbsoluteSize
             startPos = self.container.AbsolutePosition
@@ -1165,6 +1210,7 @@ function Library:_SetupSmartResize(handle)
             connection = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     resizing = false
+                    self._autoWidthEnabled = true
                     CreateTween(handle, {ImageColor3 = Color3.fromRGB(110, 110, 110)}, animationspeed.Fast)
                     if connection then
                         connection:Disconnect()
@@ -1549,6 +1595,10 @@ function Library._CreateTab(section, name, icon)
 return Library._CreateContentSection(self, sectionName)
     end
 
+    function tabMethods:CreateSectionLabel(labelName)
+        return Library._CreateSectionLabel(self, labelName)
+    end
+
     function tabMethods:CreateLabel(config)
         -- ============================================
 -- Skulx Library [Optimized v1.1]
@@ -1730,17 +1780,37 @@ end
 function Library._CreateContentSection(tab, name)
     local section = CreateInstance("TextLabel", {
         Name = "Section_" .. name,
-        Font = f.Regular,
+        Font = f.Bold,
         TextColor3 = c.TextDark,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         TextSize = 15,
+        TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         Size = UDim2.new(1, 0, 0, 25),
         Parent = tab.content
     })
 
     return section
+end
+
+function Library._CreateSectionLabel(tab, name)
+    local label = CreateInstance("TextLabel", {
+        Name = "SectionLabel_" .. name,
+        Font = f.Regular,
+        TextColor3 = c.TextDark,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        TextSize = 13,
+        TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        Size = UDim2.new(1, 0, 0, 20),
+        Parent = tab.content
+    })
+
+    return label
 end
 
 function Library._CreateDualSection(tab, leftName, rightName)
@@ -1783,7 +1853,9 @@ function Library._CreateDualSection(tab, leftName, rightName)
                 Text = sectionName,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BackgroundTransparency = 1,
-                TextSize = 15,
+                TextSize = 13,
+                TextWrapped = false,
+                TextTruncate = Enum.TextTruncate.AtEnd,
                 Size = UDim2.new(1, 0, 0, 20),
                 Parent = column
             })
@@ -2029,7 +2101,7 @@ function Library._CreateSlider(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 5),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(1, -50, 0, 20),
         Parent = frame
     })
 
@@ -2169,7 +2241,7 @@ function Library._CreateButton(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(1, -70, 0, 20),
         Parent = frame
     })
 
@@ -2238,7 +2310,7 @@ function Library._CreateToggle(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(1, -50, 0, 20),
         Parent = frame
     })
 
@@ -2359,7 +2431,7 @@ function Library._CreateDropdown(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(1, -155, 0, 20),
         ZIndex = 1,
         Parent = frame
     })
@@ -3117,7 +3189,7 @@ function Library._CreateTextBox(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 150, 0, 20),
+        Size = UDim2.new(1, -115, 0, 20),
         Parent = frame
     })
 
@@ -3693,21 +3765,17 @@ function Library:CreateInfoTab(config)
     local gameName = config.GameName or tostring(game.PlaceId)
     local gameIcon = config.GameIcon or ("rbxgamethumb://type=GameThumbnail&id=" .. game.PlaceId .. "&w=150&h=150")
     local updates = config.Updates or {}
-    local credits = config.Credits or {}
-    local webhookUrl = config.WebhookUrl or ""
 
     local infoSection = self:CreateSection("__InfoSection__")
     local infoTab = infoSection:CreateTab("Info", "rbxassetid://76969973297483")
 
-    -- DUAL SECTION: Left = Game Info, Right = Credits
-    local LeftBox, RightBox = Library._CreateDualSection(infoTab, "[ Game Information ]", "[ Credits ]")
+    Library._CreateContentSection(infoTab, "[ Game Information ]")
 
-    -- LEFT SIDE: Game Info
     local gameRow = CreateInstance("Frame", {
         Name = "GameRow",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 72),
-        Parent = LeftBox.content
+        Parent = infoTab.content
     })
 
     local thumbImg = CreateInstance("ImageLabel", {
@@ -3784,197 +3852,32 @@ function Library:CreateInfoTab(config)
         end
     end)
 
-    -- Updates section (left side, below game info)
     if #updates > 0 then
-        Library._CreateContentSection({content = LeftBox.content, _library = self}, "[ Update ]")
+        Library._CreateContentSection(infoTab, "[ Update ]")
 
         for _, updateText in ipairs(updates) do
             CreateInstance("TextLabel", {
                 Name = "UpdateEntry",
                 Font = f.Regular,
                 TextColor3 = c.TextDark,
-                Text = "- " .. updateText,
+                Text = "• " .. updateText,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextWrapped = true,
                 BackgroundTransparency = 1,
                 TextSize = textsize.Normal,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
-                Parent = LeftBox.content
-            })
-        end
-    end
-
-    -- RIGHT SIDE: Credits
-    -- Roblox ID Image (mauuna)
-    local robloxId = credits.RobloxId or ""
-    if robloxId ~= "" then
-        local idFrame = CreateInstance("Frame", {
-            Name = "RobloxIdFrame",
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 100),
-            Parent = RightBox.content
-        })
-
-        local idImage = CreateInstance("ImageLabel", {
-            Name = "RobloxIdImage",
-            BackgroundTransparency = 1,
-            Image = "rbxthumb://type=AvatarHeadShot&id=" .. robloxId .. "&w=150&h=150",
-            AnchorPoint = Vector2.new(0.5, 0),
-            Position = UDim2.new(0.5, 0, 0, 0),
-            Size = UDim2.new(0, 80, 0, 80),
-            Parent = idFrame
-        })
-        CreateCorner(idImage, 40)
-
-        CreateInstance("TextLabel", {
-            Name = "RobloxUsername",
-            Font = f.Regular,
-            TextColor3 = c.Text,
-            Text = credits.RobloxName or "Roblox User",
-            TextXAlignment = Enum.TextXAlignment.Center,
-            BackgroundTransparency = 1,
-            TextSize = textsize.Small,
-            Position = UDim2.new(0, 0, 0, 84),
-            Size = UDim2.new(1, 0, 0, 16),
-            Parent = idFrame
-        })
-    end
-
-    -- Social Media rows
-    local socials = {
-        {Name = "YouTube", Handle = credits.YouTube or "@estvivant", Icon = credits.YouTubeIcon or "", Color = Color3.fromRGB(255, 0, 0)},
-        {Name = "Discord", Handle = credits.Discord or "@insideamore", Icon = credits.DiscordIcon or "", Color = Color3.fromRGB(88, 101, 242)},
-    }
-
-    for _, social in ipairs(socials) do
-        local socialRow = CreateInstance("Frame", {
-            Name = social.Name .. "Row",
-            BackgroundColor3 = c.Secondary,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 36),
-            Parent = RightBox.content
-        })
-        CreateCorner(socialRow, 5)
-        CreateStroke(socialRow)
-
-        if social.Icon ~= "" then
-            CreateInstance("ImageLabel", {
-                Name = "Icon",
-                BackgroundTransparency = 1,
-                Image = social.Icon,
-                ImageColor3 = social.Color,
-                Position = UDim2.new(0, 8, 0.5, -10),
-                Size = UDim2.new(0, 20, 0, 20),
-                Parent = socialRow
+                Parent = infoTab.content
             })
         end
 
-        CreateInstance("TextLabel", {
-            Name = "Handle",
-            Font = f.Regular,
-            TextColor3 = c.Text,
-            Text = social.Handle,
-            TextXAlignment = Enum.TextXAlignment.Left,
+        CreateInstance("Frame", {
+            Name = "UpdateSpacer",
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, social.Icon ~= "" and 34 or 10, 0.5, -9),
-            TextSize = textsize.Small,
-            Size = UDim2.new(1, social.Icon ~= "" and -40 or -20, 0, 18),
-            Parent = socialRow
+            Size = UDim2.new(1, 0, 0, 6),
+            Parent = infoTab.content
         })
     end
-
-    -- FEEDBACK SECTION (below credits)
-    Library._CreateContentSection({content = RightBox.content, _library = self}, "[ Send Feedback ]")
-
-    local feedbackBox = CreateInstance("TextBox", {
-        Name = "FeedbackBox",
-        Font = f.Regular,
-        TextColor3 = c.Text,
-        PlaceholderText = "Type your feedback here...",
-        PlaceholderColor3 = c.TextDark,
-        Text = "",
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = true,
-        MultiLine = true,
-        ClearTextOnFocus = false,
-        BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.2,
-        BorderSizePixel = 0,
-        TextSize = textsize.Small,
-        Size = UDim2.new(1, 0, 0, 80),
-        Parent = RightBox.content
-    })
-    CreateCorner(feedbackBox, 5)
-    CreateStroke(feedbackBox)
-    CreatePadding(feedbackBox, 8, 8, 8, 8)
-
-    local sendFeedbackBtn = CreateInstance("TextButton", {
-        Name = "SendFeedback",
-        Font = f.Regular,
-        TextColor3 = c.Text,
-        Text = "Send Feedback",
-        BackgroundColor3 = c.Accent,
-        BackgroundTransparency = 0.85,
-        BorderSizePixel = 0,
-        TextSize = textsize.Normal,
-        Size = UDim2.new(1, 0, 0, 36),
-        Parent = RightBox.content
-    })
-    CreateCorner(sendFeedbackBtn, 5)
-    CreateStroke(sendFeedbackBtn)
-
-    sendFeedbackBtn.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        local feedbackText = feedbackBox.Text
-        if feedbackText == "" or feedbackText == " " then
-            self:Notify({Title = "Feedback", Description = "Please type a message first!", Duration = 2})
-            return
-        end
-
-        if webhookUrl == "" then
-            self:Notify({Title = "Feedback", Description = "Webhook URL not set!", Duration = 2})
-            return
-        end
-
-        local success, err = pcall(function()
-            local data = {
-                ["content"] = "",
-                ["embeds"] = {{
-                    ["title"] = "New Feedback",
-                    ["description"] = feedbackText,
-                    ["color"] = 5814783,
-                    ["fields"] = {
-                        {["name"] = "Player", ["value"] = plr.LocalPlayer.Name .. " (" .. plr.LocalPlayer.DisplayName .. ")", ["inline"] = true},
-                        {["name"] = "User ID", ["value"] = tostring(plr.LocalPlayer.UserId), ["inline"] = true},
-                        {["name"] = "Game", ["value"] = gameName, ["inline"] = true},
-                        {["name"] = "Place ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
-                    },
-                    ["footer"] = {["text"] = "Skulx Library Feedback"},
-                    ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-                }}
-            }
-            local jsonData = hs:JSONEncode(data)
-            local headers = {["Content-Type"] = "application/json"}
-
-            if request then
-                request({Url = webhookUrl, Body = jsonData, Method = "POST", Headers = headers})
-            elseif http_request then
-                http_request({Url = webhookUrl, Body = jsonData, Method = "POST", Headers = headers})
-            elseif syn and syn.request then
-                syn.request({Url = webhookUrl, Body = jsonData, Method = "POST", Headers = headers})
-            end
-        end)
-
-        if success then
-            self:Notify({Title = "Feedback Sent", Description = "Thank you for your feedback!", Duration = 3, Icon = "rbxassetid://10723356507"})
-            feedbackBox.Text = ""
-        else
-            self:Notify({Title = "Error", Description = "Failed to send feedback.", Duration = 3})
-        end
-    end)
 
     return {
         SetGameName = function(_, name)
