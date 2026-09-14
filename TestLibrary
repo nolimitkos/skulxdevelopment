@@ -197,6 +197,116 @@ local animationspeed = {
 local Library = {}
 Library.__index = Library
 
+-- ============================================
+-- Skulx Lucide Icon Support
+-- Accepts:
+--   "sword"              -> Lucide icon name
+--   "crosshair"          -> Lucide icon name
+--   123456789            -> Roblox asset ID
+--   "rbxassetid://..."   -> Roblox asset
+--   nil                  -> default tab icon
+--
+-- Lucide assets are fetched through the same
+-- direct Lucide source used by Obsidian.
+-- ============================================
+local LUCIDE_SOURCE = "https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"
+local Lucide = nil
+local LucideLoaded = false
+local LucideCache = {}
+
+do
+    local success, result = pcall(function()
+        local source = game:HttpGet(LUCIDE_SOURCE)
+        local chunk = loadstring(source)
+        if not chunk then
+            error("Failed to compile Lucide source")
+        end
+        return chunk()
+    end)
+
+    if success and type(result) == "table" then
+        Lucide = result
+        LucideLoaded = true
+    end
+end
+
+local function IsRobloxIcon(value)
+    if typeof(value) ~= "string" then
+        return false
+    end
+
+    return value:match("^rbxasset://")
+        or value:match("^rbxassetid://")
+        or value:match("^rbxthumb://")
+        or value:match("roblox%.com/asset/%?id=")
+end
+
+local function ResolveIcon(iconName, iconSize)
+    iconSize = iconSize or 64
+
+    if iconName == nil or iconName == "" then
+        return {
+            Url = "rbxassetid://112235310154264",
+            ImageRectOffset = Vector2.zero,
+            ImageRectSize = Vector2.zero,
+            Custom = true,
+        }
+    end
+
+    -- Numeric Roblox asset IDs remain supported.
+    if typeof(iconName) == "number" or tonumber(iconName) then
+        local id = tostring(iconName)
+        return {
+            Url = "rbxassetid://" .. id,
+            ImageRectOffset = Vector2.zero,
+            ImageRectSize = Vector2.zero,
+            Custom = true,
+        }
+    end
+
+    -- Existing Roblox asset strings remain supported.
+    if IsRobloxIcon(iconName) then
+        return {
+            Url = iconName,
+            ImageRectOffset = Vector2.zero,
+            ImageRectSize = Vector2.zero,
+            Custom = true,
+        }
+    end
+
+    -- Lucide icon name.
+    if LucideLoaded and Lucide and type(Lucide.GetAsset) == "function" then
+        local cacheKey = string.lower(tostring(iconName)) .. ":" .. tostring(iconSize)
+        if LucideCache[cacheKey] then
+            return LucideCache[cacheKey]
+        end
+
+        local success, asset = pcall(function()
+            return Lucide.GetAsset(tostring(iconName), iconSize)
+        end)
+
+        if success and asset then
+            LucideCache[cacheKey] = asset
+            return asset
+        end
+    end
+
+    return nil
+end
+
+function Library:GetIcon(iconName, iconSize)
+    return ResolveIcon(iconName, iconSize)
+end
+
+function Library:GetLucideIcon(iconName, iconSize)
+    if not LucideLoaded or not Lucide then
+        return nil
+    end
+
+    return ResolveIcon(iconName, iconSize)
+end
+
+
 local Connections = {}
 local NotificationQueue = {}
 local NotificationContainer = nil
@@ -1537,6 +1647,7 @@ function Library._CreateTab(section, name, icon)
         name = name,
         elements = {},
         icon = nil,
+        iconName = icon,
         textLabel = nil
     }
 
@@ -1552,10 +1663,13 @@ function Library._CreateTab(section, name, icon)
 
     local tabStroke = CreateStroke(tabBtn, c.Border, 1)
 
+    local resolvedIcon = ResolveIcon(icon, 64)
     local iconLabel = CreateInstance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon or "rbxassetid://112235310154264",
+        Image = resolvedIcon and resolvedIcon.Url or "rbxassetid://112235310154264",
+        ImageRectOffset = resolvedIcon and resolvedIcon.ImageRectOffset or Vector2.zero,
+        ImageRectSize = resolvedIcon and resolvedIcon.ImageRectSize or Vector2.zero,
         ImageColor3 = c.TextDark,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 11, 0.5, 0),
@@ -1644,6 +1758,23 @@ function Library._CreateTab(section, name, icon)
     end
 
     local tabMethods = setmetatable({}, {__index = tab})
+
+    function tabMethods:SetIcon(newIcon)
+        local resolved = ResolveIcon(newIcon, 64)
+        if not resolved then
+            return false
+        end
+
+        self.iconName = newIcon
+        self.icon.Image = resolved.Url
+        self.icon.ImageRectOffset = resolved.ImageRectOffset or Vector2.zero
+        self.icon.ImageRectSize = resolved.ImageRectSize or Vector2.zero
+        return true
+    end
+
+    function tabMethods:GetIconName()
+        return self.iconName
+    end
 
     function tabMethods:CreateSection(sectionName)
         -- ============================================
