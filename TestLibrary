@@ -2448,6 +2448,7 @@ end
 function Library._CreateButton(tab, config)
     local name = config.Name or "Button"
     local callback = config.Callback or function() end
+    local flag = config.Flag or config.Name
 
     local frame = CreateInstance("Frame", {
         Name = "Button_" .. name,
@@ -2502,13 +2503,35 @@ function Library._CreateButton(tab, config)
         CreateTween(frame, {BackgroundTransparency = 0.4}, animationspeed.Fast)
     end)
 
-    Library._AddSpacer(tab.content, config)
-
-    return {
+    local methods = {
         SetText = function(_, text)
             nameLabel.Text = text
+        end,
+        Press = function()
+            callback()
         end
     }
+
+    -- Register the button with the config system.
+    -- Saves/restores the current display text; loading never fires the callback.
+    if flag and tab._library then
+        tab._library:_RegisterConfigElement(
+            flag,
+            "Button",
+            function()
+                return nameLabel.Text
+            end,
+            function(value)
+                if type(value) == "string" then
+                    nameLabel.Text = value
+                end
+            end
+        )
+    end
+
+    Library._AddSpacer(tab.content, config)
+
+    return methods
 end
 
 function Library._CreateToggle(tab, config)
