@@ -71,6 +71,7 @@ local Themes = {
 local c = Themes.Dark
 local currentThemeName = "Dark"
 local ThemedInstances = {}
+local ThemedGradients = {}
 
 local function GetThemeKeyPath(colorValue)
     for key, value in pairs(c) do
@@ -113,6 +114,13 @@ local function RetargetThemedProperty(instance, property, path)
     TrackThemedProperty(instance, property, path)
 end
 
+local function TrackThemedGradient(instance, paths)
+    table.insert(ThemedGradients, {
+        instance = instance,
+        paths = paths
+    })
+end
+
 local function ApplyTheme(themeName)
     local theme = Themes[themeName]
     if not theme then return end
@@ -123,9 +131,30 @@ local function ApplyTheme(themeName)
     for i = #ThemedInstances, 1, -1 do
         local entry = ThemedInstances[i]
         if entry.instance and entry.instance.Parent then
-            entry.instance[entry.property] = ResolveThemeColor(theme, entry.path)
+            local value = ResolveThemeColor(theme, entry.path)
+            if value ~= nil then
+                entry.instance[entry.property] = value
+            end
         else
             table.remove(ThemedInstances, i)
+        end
+    end
+
+    for i = #ThemedGradients, 1, -1 do
+        local entry = ThemedGradients[i]
+        if entry.instance and entry.instance.Parent then
+            local keypoints = {}
+            for _, point in ipairs(entry.paths) do
+                local color = ResolveThemeColor(theme, point.path)
+                if color then
+                    table.insert(keypoints, ColorSequenceKeypoint.new(point.time, color))
+                end
+            end
+            if #keypoints > 0 then
+                entry.instance.Color = ColorSequence.new(keypoints)
+            end
+        else
+            table.remove(ThemedGradients, i)
         end
     end
 end
@@ -971,7 +1000,8 @@ function Library:_Createv0rtexdControls()
 
     local resizeBtn = CreateInstance("ImageButton", {
         Name = "Resize",
-        ImageColor3 = Color3.fromRGB(110, 110, 110),
+        ImageColor3 = c.TextDark,
+        ThemePaths = { ImageColor3 = {"TextDark"} },
         Image = "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -996,45 +1026,61 @@ function Library:_SetGuiVisible(visible)
 end
 
 function Library:_CreateReopenButton()
-    local reopenBtn = Instance.new("ImageButton")
-    reopenBtn.Name = "ReopenButton"
-    reopenBtn.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-    reopenBtn.BackgroundTransparency = 0.05
-    reopenBtn.Image = ""
-    reopenBtn.AnchorPoint = Vector2.new(0, 0)
-    reopenBtn.Position = UDim2.new(0, 20, 0, 20)
-    reopenBtn.Size = UDim2.new(0, 50, 0, 50)
-    reopenBtn.BorderSizePixel = 0
-    reopenBtn.Visible = false
-    reopenBtn.Parent = self.screenGui
+    local reopenBtn = CreateInstance("ImageButton", {
+        Name = "ReopenButton",
+        BackgroundColor3 = c.Background,
+        BackgroundTransparency = 0.05,
+        Image = "",
+        AnchorPoint = Vector2.new(0, 0),
+        Position = UDim2.new(0, 20, 0, 20),
+        Size = UDim2.new(0, 50, 0, 50),
+        BorderSizePixel = 0,
+        Visible = false,
+        ThemePaths = {
+            BackgroundColor3 = {"Background"}
+        },
+        Parent = self.screenGui
+    })
     CreateCorner(reopenBtn, 16)
 
     local icon = CreateInstance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
         Image = "rbxassetid://91932756882825",
+        ImageColor3 = c.Text,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(0, 28, 0, 28),
+        ThemePaths = {
+            ImageColor3 = {"Text"}
+        },
         Parent = reopenBtn
     })
 
     local stroke = CreateInstance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        Color = Color3.fromRGB(255, 255, 255),
+        Color = c.Text,
         Transparency = 0,
         Thickness = 2,
+        ThemePaths = {
+            Color = {"Text"}
+        },
         Parent = reopenBtn
     })
 
     local gradient = CreateInstance("UIGradient", {
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 0, 0)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+            ColorSequenceKeypoint.new(0, c.Text),
+            ColorSequenceKeypoint.new(0.5, c.Background),
+            ColorSequenceKeypoint.new(1, c.Text)
         }),
         Rotation = 0,
         Parent = stroke
+    })
+    TrackThemedGradient(gradient, {
+        {time = 0, path = {"Text"}},
+        {time = 0.5, path = {"Background"}},
+        {time = 1, path = {"Text"}}
     })
 
     -- OPTIMIZED: Throttled gradient rotation to reduce lag
@@ -1128,7 +1174,8 @@ function Library:_CreateContentArea()
     self.contentContainer = CreateInstance("ScrollingFrame", {
         Name = "ContentContainer",
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = c.TextDark,
+        ThemePaths = { ScrollBarImageColor3 = {"TextDark"} },
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 166, 0, 0),
         Size = UDim2.new(1, -166, 1, 0),
@@ -1193,7 +1240,7 @@ function Library:_SetupSmartResize(handle)
 
     handle.MouseLeave:Connect(function()
         if not resizing then
-            CreateTween(handle, {ImageColor3 = Color3.fromRGB(110, 110, 110)}, animationspeed.Fast)
+            CreateTween(handle, {ImageColor3 = c.TextDark}, animationspeed.Fast)
         end
     end)
 
@@ -1211,7 +1258,7 @@ function Library:_SetupSmartResize(handle)
                 if input.UserInputState == Enum.UserInputState.End then
                     resizing = false
                     self._autoWidthEnabled = true
-                    CreateTween(handle, {ImageColor3 = Color3.fromRGB(110, 110, 110)}, animationspeed.Fast)
+                    CreateTween(handle, {ImageColor3 = c.TextDark}, animationspeed.Fast)
                     if connection then
                         connection:Disconnect()
                     end
@@ -1295,6 +1342,10 @@ function Library:SaveConfig(configName)
     end
     EnsureConfigFolder()
     local configData = {}
+    -- Theme is a library-level setting, not just a UI element value.
+    -- Store it explicitly so configs created from any version preserve the selected theme.
+    configData.__theme = currentThemeName
+
     for id, element in pairs(self._configElements) do
         local value = element.getValue()
         if typeof(value) == "Color3" then
@@ -1358,8 +1409,14 @@ function Library:LoadConfig(configName)
         })
         return false
     end
+    -- Apply the saved theme first so every tracked UI property is retargeted
+    -- before element values/callbacks are restored.
+    if type(data.__theme) == "string" and Themes[data.__theme] then
+        ApplyTheme(data.__theme)
+    end
+
     for id, value in pairs(data) do
-        if self._configElements[id] then
+        if id ~= "__theme" and self._configElements[id] then
             if type(value) == "table" and value._type == "Color3" then
                 value = Color3.new(value.R, value.G, value.B)
             elseif type(value) == "table" and value._type == "EnumItem" then
@@ -1478,7 +1535,9 @@ end
 function Library._CreateTab(section, name, icon)
     local tab = {
         name = name,
-        elements = {}
+        elements = {},
+        icon = nil,
+        textLabel = nil
     }
 
     local tabBtn = CreateInstance("Frame", {
@@ -1529,6 +1588,11 @@ function Library._CreateTab(section, name, icon)
             ColorSequenceKeypoint.new(1, c.TextFade)
         }),
         Parent = tabText
+    })
+    TrackThemedGradient(textGradient, {
+        {time = 0, path = {"TextDark"}},
+        {time = 0.65, path = {"TextDark"}},
+        {time = 1, path = {"TextFade"}}
     })
 
     local clickBtn = CreateInstance("TextButton", {
@@ -1760,7 +1824,10 @@ function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient
     if lib.currentTab then
         lib.currentTab.content.Visible = false
         CreateTween(lib.currentTab.button, {BackgroundTransparency = 1}, animationspeed.Fast)
+        RetargetThemedProperty(lib.currentTab.icon, "ImageColor3", {"TextDark"})
         CreateTween(lib.currentTab.icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+        RetargetThemedProperty(lib.currentTab.textLabel, "TextColor3", {"TextDark"})
+        CreateTween(lib.currentTab.textLabel, {TextColor3 = c.TextDark}, animationspeed.Fast)
         lib.currentTab.stroke.Transparency = 1
         if lib.currentTab.textGradient then
             lib.currentTab.textGradient.Enabled = true
@@ -1769,12 +1836,16 @@ function Library._SelectTab(lib, tab, btn, stroke, icon, textLabel, textGradient
     lib.currentTab = tab
     tab.content.Visible = true
     CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
+    RetargetThemedProperty(icon, "ImageColor3", {"Text"})
     CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
     stroke.Transparency = 1  
     if textGradient then
         textGradient.Enabled = false
     end
-    textLabel.TextColor3 = c.Text
+    RetargetThemedProperty(textLabel, "TextColor3", {"Text"})
+    CreateTween(textLabel, {TextColor3 = c.Text}, animationspeed.Fast)
+    tab.textLabel = textLabel
+    tab.icon = icon
 end
 
 function Library._CreateContentSection(tab, name)
@@ -2146,7 +2217,8 @@ function Library._CreateSlider(tab, config)
 
     local sliderBg = CreateInstance("Frame", {
         Name = "SliderBackground",
-        BackgroundColor3 = Color3.fromRGB(11, 11, 11),
+        BackgroundColor3 = c.Background,
+        ThemePaths = { BackgroundColor3 = {"Background"} },
         Position = UDim2.new(0, 10, 0, 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, 7),
@@ -2205,6 +2277,7 @@ function Library._CreateSlider(tab, config)
         end
     end)
 
+    -- OPTIMIZED: Throttled slider updates
     local LastSliderUpdate = 0
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -2341,6 +2414,9 @@ function Library._CreateToggle(tab, config)
     local switchBg = CreateInstance("Frame", {
         Name = "SwitchBackground",
         BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled,
+        ThemePaths = {
+            BackgroundColor3 = enabled and {"Toggle", "Enabled"} or {"Toggle", "Disabled"}
+        },
         Position = UDim2.new(1, -48, 0.5, -10),
         BorderSizePixel = 0,
         Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height),
@@ -2351,6 +2427,9 @@ function Library._CreateToggle(tab, config)
     local switchCircle = CreateInstance("Frame", {
         Name = "Circle",
         BackgroundColor3 = c.Toggle.Circle,
+        ThemePaths = {
+            BackgroundColor3 = {"Toggle", "Circle"}
+        },
         AnchorPoint = Vector2.new(0, 0.5),
         Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
         BorderSizePixel = 0,
@@ -2566,7 +2645,8 @@ function Library._CreateDropdown(tab, config)
         Size = UDim2.new(1, 0, 1, -searchBoxHeight),
         CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = c.TextDark,
+        ThemePaths = { ScrollBarImageColor3 = {"TextDark"} },
         ZIndex = 100,
         Parent = optionsContainer
     })
@@ -2588,8 +2668,9 @@ function Library._CreateDropdown(tab, config)
             Font = f.Regular,
             TextColor3 = c.Text,
             Text = option,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundColor3 = c.Secondary,
             BackgroundTransparency = 1,
+            ThemePaths = { BackgroundColor3 = {"Secondary"} },
             BorderSizePixel = 0,
             TextSize = textsize.Small,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -2620,6 +2701,8 @@ function Library._CreateDropdown(tab, config)
         local function RefreshVisual()
             local sel = multiSelect and (table.find(selected, option) ~= nil) or (selected == option)
             checkDot.BackgroundTransparency = sel and 0 or 1
+            local textPath = sel and {"Text"} or {"TextDark"}
+            RetargetThemedProperty(optionBtn, "TextColor3", textPath)
             optionBtn.TextColor3 = sel and c.Text or c.TextDark
         end
         RefreshVisual()
@@ -2650,6 +2733,7 @@ function Library._CreateDropdown(tab, config)
                     if child:IsA("TextButton") then
                         local dot = child:FindFirstChild("CheckDot")
                         if dot then dot.BackgroundTransparency = 1 end
+                        RetargetThemedProperty(child, "TextColor3", {"TextDark"})
                         child.TextColor3 = c.TextDark
                     end
                 end
@@ -2718,6 +2802,8 @@ function Library._CreateDropdown(tab, config)
                 if dot then
                     dot.BackgroundTransparency = sel and 0 or 1
                 end
+                local textPath = sel and {"Text"} or {"TextDark"}
+                RetargetThemedProperty(child, "TextColor3", textPath)
                 child.TextColor3 = sel and c.Text or c.TextDark
             end
         end
@@ -2956,7 +3042,8 @@ function Library._CreateColorPicker(tab, config)
 
     local pickerContainer = CreateInstance("Frame", {
         Name = "PickerContainer",
-        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        BackgroundColor3 = c.Secondary,
+        ThemePaths = { BackgroundColor3 = {"Secondary"} },
         BorderSizePixel = 0,
         Size = UDim2.new(0, 160, 0, 115),
         Visible = false,
@@ -2966,7 +3053,8 @@ function Library._CreateColorPicker(tab, config)
     CreateCorner(pickerContainer, 6)
 
     local containerStroke = CreateInstance("UIStroke", {
-        Color = Color3.fromRGB(40, 40, 40),
+        Color = c.Border,
+        ThemePaths = { Color = {"Border"} },
         Thickness = 1,
         Parent = pickerContainer
     })
@@ -3069,7 +3157,8 @@ function Library._CreateColorPicker(tab, config)
     CreateCorner(hueCursor, 100)
     CreateInstance("UIStroke", {
         Thickness = 1,
-        Color = Color3.fromRGB(20, 20, 20),
+        Color = c.Border,
+        ThemePaths = { Color = {"Border"} },
         Parent = hueCursor
     })
 
@@ -3275,13 +3364,17 @@ function Library._CreateTextBox(tab, config)
     textBox.Focused:Connect(function()
         PlayClickSound()
         CreateTween(textBoxContainer, {BackgroundTransparency = 0}, animationspeed.Fast)
+        RetargetThemedProperty(textBoxStroke, "Color", {"Accent"})
         CreateTween(textBoxStroke, {Color = c.Accent}, animationspeed.Fast)
+        RetargetThemedProperty(icon, "ImageColor3", {"Text"})
         CreateTween(icon, {ImageColor3 = c.Text}, animationspeed.Fast)
     end)
 
     textBox.FocusLost:Connect(function(enterPressed)
         CreateTween(textBoxContainer, {BackgroundTransparency = 0.04}, animationspeed.Fast)
+        RetargetThemedProperty(textBoxStroke, "Color", {"Border"})
         CreateTween(textBoxStroke, {Color = c.Border}, animationspeed.Fast)
+        RetargetThemedProperty(icon, "ImageColor3", {"TextDark"})
         CreateTween(icon, {ImageColor3 = c.TextDark}, animationspeed.Fast)
         if numbersOnly then
             local numValue = tonumber(textBox.Text)
