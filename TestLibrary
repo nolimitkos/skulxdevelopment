@@ -197,116 +197,6 @@ local animationspeed = {
 local Library = {}
 Library.__index = Library
 
--- ============================================
--- Skulx Lucide Icon Support
--- Accepts:
---   "sword"              -> Lucide icon name
---   "crosshair"          -> Lucide icon name
---   123456789            -> Roblox asset ID
---   "rbxassetid://..."   -> Roblox asset
---   nil                  -> default tab icon
---
--- Lucide assets are fetched through the same
--- direct Lucide source used by Obsidian.
--- ============================================
-local LUCIDE_SOURCE = "https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"
-local Lucide = nil
-local LucideLoaded = false
-local LucideCache = {}
-
-do
-    local success, result = pcall(function()
-        local source = game:HttpGet(LUCIDE_SOURCE)
-        local chunk = loadstring(source)
-        if not chunk then
-            error("Failed to compile Lucide source")
-        end
-        return chunk()
-    end)
-
-    if success and type(result) == "table" then
-        Lucide = result
-        LucideLoaded = true
-    end
-end
-
-local function IsRobloxIcon(value)
-    if typeof(value) ~= "string" then
-        return false
-    end
-
-    return value:match("^rbxasset://")
-        or value:match("^rbxassetid://")
-        or value:match("^rbxthumb://")
-        or value:match("roblox%.com/asset/%?id=")
-end
-
-local function ResolveIcon(iconName, iconSize)
-    iconSize = iconSize or 64
-
-    if iconName == nil or iconName == "" then
-        return {
-            Url = "rbxassetid://112235310154264",
-            ImageRectOffset = Vector2.zero,
-            ImageRectSize = Vector2.zero,
-            Custom = true,
-        }
-    end
-
-    -- Numeric Roblox asset IDs remain supported.
-    if typeof(iconName) == "number" or tonumber(iconName) then
-        local id = tostring(iconName)
-        return {
-            Url = "rbxassetid://" .. id,
-            ImageRectOffset = Vector2.zero,
-            ImageRectSize = Vector2.zero,
-            Custom = true,
-        }
-    end
-
-    -- Existing Roblox asset strings remain supported.
-    if IsRobloxIcon(iconName) then
-        return {
-            Url = iconName,
-            ImageRectOffset = Vector2.zero,
-            ImageRectSize = Vector2.zero,
-            Custom = true,
-        }
-    end
-
-    -- Lucide icon name.
-    if LucideLoaded and Lucide and type(Lucide.GetAsset) == "function" then
-        local cacheKey = string.lower(tostring(iconName)) .. ":" .. tostring(iconSize)
-        if LucideCache[cacheKey] then
-            return LucideCache[cacheKey]
-        end
-
-        local success, asset = pcall(function()
-            return Lucide.GetAsset(tostring(iconName), iconSize)
-        end)
-
-        if success and asset then
-            LucideCache[cacheKey] = asset
-            return asset
-        end
-    end
-
-    return nil
-end
-
-function Library:GetIcon(iconName, iconSize)
-    return ResolveIcon(iconName, iconSize)
-end
-
-function Library:GetLucideIcon(iconName, iconSize)
-    if not LucideLoaded or not Lucide then
-        return nil
-    end
-
-    return ResolveIcon(iconName, iconSize)
-end
-
-
 local Connections = {}
 local NotificationQueue = {}
 local NotificationContainer = nil
@@ -1434,6 +1324,12 @@ end
 
 
 function Library:_RegisterConfigElement(id, elementType, getValue, setValue)
+    if not id or id == "" then
+        return
+    end
+
+    self._configElements = self._configElements or {}
+
     self._configElements[id] = {
         type = elementType,
         getValue = getValue,
@@ -1456,14 +1352,18 @@ function Library:SaveConfig(configName)
     -- Store it explicitly so configs created from any version preserve the selected theme.
     configData.__theme = currentThemeName
 
-    for id, element in pairs(self._configElements) do
-        local value = element.getValue()
-        if typeof(value) == "Color3" then
-            value = {R = value.R, G = value.G, B = value.B, _type = "Color3"}
-        elseif typeof(value) == "EnumItem" then
-            value = {_type = "EnumItem", _enum = tostring(value.EnumType), _value = value.Name}
+    for id, element in pairs(self._configElements or {}) do
+        if element and type(element.getValue) == "function" then
+            local ok, value = pcall(element.getValue)
+            if ok then
+                if typeof(value) == "Color3" then
+                    value = {R = value.R, G = value.G, B = value.B, _type = "Color3"}
+                elseif typeof(value) == "EnumItem" then
+                    value = {_type = "EnumItem", _enum = tostring(value.EnumType), _value = value.Name}
+                end
+                configData[id] = value
+            end
         end
-        configData[id] = value
     end
     local success, err = pcall(function()
         writefile(GetConfigFolder(configName) .. ".json", hs:JSONEncode(configData))
@@ -1526,7 +1426,7 @@ function Library:LoadConfig(configName)
     end
 
     for id, value in pairs(data) do
-        if id ~= "__theme" and self._configElements[id] then
+        if id ~= "__theme" and self._configElements and self._configElements[id] then
             if type(value) == "table" and value._type == "Color3" then
                 value = Color3.new(value.R, value.G, value.B)
             elseif type(value) == "table" and value._type == "EnumItem" then
@@ -1647,7 +1547,6 @@ function Library._CreateTab(section, name, icon)
         name = name,
         elements = {},
         icon = nil,
-        iconName = icon,
         textLabel = nil
     }
 
@@ -1663,13 +1562,10 @@ function Library._CreateTab(section, name, icon)
 
     local tabStroke = CreateStroke(tabBtn, c.Border, 1)
 
-    local resolvedIcon = ResolveIcon(icon, 64)
     local iconLabel = CreateInstance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = resolvedIcon and resolvedIcon.Url or "rbxassetid://112235310154264",
-        ImageRectOffset = resolvedIcon and resolvedIcon.ImageRectOffset or Vector2.zero,
-        ImageRectSize = resolvedIcon and resolvedIcon.ImageRectSize or Vector2.zero,
+        Image = icon or "rbxassetid://112235310154264",
         ImageColor3 = c.TextDark,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 11, 0.5, 0),
@@ -1758,23 +1654,6 @@ function Library._CreateTab(section, name, icon)
     end
 
     local tabMethods = setmetatable({}, {__index = tab})
-
-    function tabMethods:SetIcon(newIcon)
-        local resolved = ResolveIcon(newIcon, 64)
-        if not resolved then
-            return false
-        end
-
-        self.iconName = newIcon
-        self.icon.Image = resolved.Url
-        self.icon.ImageRectOffset = resolved.ImageRectOffset or Vector2.zero
-        self.icon.ImageRectSize = resolved.ImageRectSize or Vector2.zero
-        return true
-    end
-
-    function tabMethods:GetIconName()
-        return self.iconName
-    end
 
     function tabMethods:CreateSection(sectionName)
         -- ============================================
@@ -2446,14 +2325,22 @@ function Library._CreateSlider(tab, config)
 end
 
 function Library._CreateButton(tab, config)
+    config = config or {}
+
     local name = config.Name or "Button"
     local callback = config.Callback or function() end
-    local flag = config.Flag or config.Name
+
+    -- Buttons are normally action-only and therefore have no config state.
+    -- If SaveState/Flag is explicitly supplied, the last pressed state can
+    -- participate in SaveConfig/LoadConfig without ever replaying the callback.
+    local saveState = config.SaveState == true
+    local flag = config.Flag or (saveState and config.Name or nil)
+    local pressed = config.Default == true
 
     local frame = CreateInstance("Frame", {
         Name = "Button_" .. name,
         BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = pressed and 0.2 or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, s.Button.Height),
         Parent = tab.content
@@ -2495,43 +2382,61 @@ function Library._CreateButton(tab, config)
         Parent = frame
     })
 
+    local function setPressed(value)
+        pressed = value == true
+        CreateTween(
+            frame,
+            {BackgroundTransparency = pressed and 0.2 or 0.4},
+            animationspeed.Fast
+        )
+    end
+
     button.MouseButton1Click:Connect(function()
         PlayClickSound()
+
+        if saveState then
+            pressed = not pressed
+        end
+
         callback()
+
         CreateTween(frame, {BackgroundTransparency = 0.2}, animationspeed.Fast)
         task.wait(0.1)
-        CreateTween(frame, {BackgroundTransparency = 0.4}, animationspeed.Fast)
+        CreateTween(
+            frame,
+            {BackgroundTransparency = pressed and 0.2 or 0.4},
+            animationspeed.Fast
+        )
     end)
 
-    local methods = {
-        SetText = function(_, text)
-            nameLabel.Text = text
-        end,
-        Press = function()
-            callback()
-        end
-    }
-
-    -- Register the button with the config system.
-    -- Saves/restores the current display text; loading never fires the callback.
-    if flag and tab._library then
+    if saveState and flag and tab._library then
         tab._library:_RegisterConfigElement(
             flag,
             "Button",
             function()
-                return nameLabel.Text
+                return pressed
             end,
             function(value)
-                if type(value) == "string" then
-                    nameLabel.Text = value
-                end
+                setPressed(value)
             end
         )
     end
 
     Library._AddSpacer(tab.content, config)
 
-    return methods
+    return {
+        SetText = function(_, text)
+            nameLabel.Text = text
+        end,
+
+        SetPressed = function(_, value)
+            setPressed(value)
+        end,
+
+        GetPressed = function()
+            return pressed
+        end
+    }
 end
 
 function Library._CreateToggle(tab, config)
