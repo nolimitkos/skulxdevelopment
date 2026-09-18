@@ -1536,6 +1536,7 @@ function Library:CreateSection(name)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateTab(self, tabName, icon)
     end
 
@@ -1666,6 +1667,7 @@ function Library._CreateTab(section, name, icon)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateContentSection(self, sectionName)
     end
 
@@ -1684,6 +1686,7 @@ return Library._CreateContentSection(self, sectionName)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateLabel(self, config)
     end
 
@@ -1698,6 +1701,7 @@ return Library._CreateLabel(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateParagraph(self, config)
     end
 
@@ -1712,6 +1716,7 @@ return Library._CreateParagraph(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateSlider(self, config)
     end
 
@@ -1726,6 +1731,7 @@ return Library._CreateSlider(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateButton(self, config)
     end
 
@@ -1740,6 +1746,7 @@ return Library._CreateButton(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateToggle(self, config)
     end
 
@@ -1754,6 +1761,7 @@ return Library._CreateToggle(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateDropdown(self, config)
     end
 
@@ -1768,6 +1776,7 @@ return Library._CreateDropdown(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateKeybind(self, config, section._library)
     end
 
@@ -1782,6 +1791,7 @@ return Library._CreateKeybind(self, config, section._library)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateColorPicker(self, config)
     end
 
@@ -1796,6 +1806,7 @@ return Library._CreateColorPicker(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateTextBox(self, config)
     end
 
@@ -1810,6 +1821,7 @@ return Library._CreateTextBox(self, config)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateConfigSection(self)
     end
 
@@ -1824,6 +1836,7 @@ return Library._CreateConfigSection(self)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateDualSection(self, leftName, rightName)
     end
 
@@ -1968,6 +1981,7 @@ function Library._CreateDualSection(tab, leftName, rightName)
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateLabel({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateToggle(config)
@@ -1981,6 +1995,7 @@ return Library._CreateLabel({content = currentFrame, _library = tab._library}, c
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateToggle({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateSlider(config)
@@ -1994,6 +2009,7 @@ return Library._CreateToggle({content = currentFrame, _library = tab._library}, 
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateSlider({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateButton(config)
@@ -2007,6 +2023,7 @@ return Library._CreateSlider({content = currentFrame, _library = tab._library}, 
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateButton({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateDropdown(config)
@@ -2020,6 +2037,7 @@ return Library._CreateButton({content = currentFrame, _library = tab._library}, 
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateDropdown({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateKeybind(config)
@@ -2033,6 +2051,7 @@ return Library._CreateDropdown({content = currentFrame, _library = tab._library}
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateKeybind({content = currentFrame, _library = tab._library}, config, tab._library)
         end
         function methods:CreateColorPicker(config)
@@ -2046,6 +2065,7 @@ return Library._CreateKeybind({content = currentFrame, _library = tab._library},
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateColorPicker({content = currentFrame, _library = tab._library}, config)
         end
         function methods:CreateTextBox(config)
@@ -2059,6 +2079,7 @@ return Library._CreateColorPicker({content = currentFrame, _library = tab._libra
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library._CreateTextBox({content = currentFrame, _library = tab._library}, config)
         end
 
@@ -2167,10 +2188,8 @@ function Library._CreateSlider(tab, config)
         local range = max - min
         if range <= 0.01 then
             decimals = 3
-        elseif range <= 0.1 then
-            decimals = 2
         elseif range <= 1 then
-            decimals = 1
+            decimals = 2
         else
             decimals = 0
         end
@@ -4095,4 +4114,5 @@ end
 -- 5. Throttled info players Heartbeat (1s)
 -- 6. Throttled blur 3D calculations (0.033s)
 -- ============================================
+print("Skulx Library v1.2 loaded")
 return Library
