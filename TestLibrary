@@ -2162,15 +2162,18 @@ function Library._CreateSlider(tab, config)
     local flag = config.Flag or config.Name
     local currentValue = default
 
-    -- yes Sir, FIX: auto-detect decimal precision base sa range
-    local decimals = 0
-    local range = max - min
-    if range <= 0.01 then
-        decimals = 3
-    elseif range <= 0.1 then
-        decimals = 2
-    elseif range <= 1 then
-        decimals = 1
+    local decimals = config.Decimals
+    if not decimals then
+        local range = max - min
+        if range <= 0.01 then
+            decimals = 3
+        elseif range <= 0.1 then
+            decimals = 2
+        elseif range <= 1 then
+            decimals = 1
+        else
+            decimals = 0
+        end
     end
 
     local function RoundValue(value)
